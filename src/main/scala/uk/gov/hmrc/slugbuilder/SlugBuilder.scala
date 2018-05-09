@@ -16,13 +16,22 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import uk.gov.hmrc.{ReleaseVersion, RepositoryName}
+import cats.implicits._
+import play.api.LoggerLike
 
-class SlugBuilder {
+class SlugBuilder(slugChecker: SlugChecker, artifactChecker: ArtifactChecker, progressReporter: ProgressReporter) {
 
-  def create(repoName: String, releaseVersion: String): Unit = {
-    val repositoryName = RepositoryName(repoName)
-    val version        = ReleaseVersion(releaseVersion)
-  }
+  def create(repoName: String, releaseVersion: String): Unit =
+    createSlug(RepositoryName(repoName), ReleaseVersion(releaseVersion)) leftMap (message =>
+      throw new RuntimeException(message))
 
+  // format: off
+  private def createSlug(repositoryName: RepositoryName, version: ReleaseVersion) =
+    for {
+      slugDoesNotExist      <- slugChecker.checkIfDoesNotExist(repositoryName, version)
+      _                     = progressReporter.show(slugDoesNotExist)
+      artifactExistsMessage <- artifactChecker.checkIfExists(repositoryName, version)
+      _                     = progressReporter.show(artifactExistsMessage)
+    } yield ()
+  // format: on
 }

@@ -19,7 +19,6 @@ package uk.gov.hmrc.slugbuilder
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.prop.PropertyChecks
-import uk.gov.hmrc.ReleaseVersion
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
 class ReleaseVersionSpec extends WordSpec with PropertyChecks {

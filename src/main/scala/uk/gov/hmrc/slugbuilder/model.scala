@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc
+package uk.gov.hmrc.slugbuilder
 
 case class RepositoryName(value: String) {
   if (value.trim.isEmpty) throw new IllegalArgumentException("Blank repository name not allowed")

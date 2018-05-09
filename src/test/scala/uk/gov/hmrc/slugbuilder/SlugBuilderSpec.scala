@@ -16,20 +16,66 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import org.scalamock.scalatest.MockFactory
+import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.prop.PropertyChecks
-import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
-import org.scalatest.Matchers._
+import uk.gov.hmrc.slugbuilder.generators.Generators._
 
-class SlugBuilderSpec extends WordSpec with PropertyChecks {
+class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory {
 
   "create" should {
 
-    "take a repository name and release version as arguments" in new Setup {
+    "check if the slug does not exist" in new Setup {
       forAll(nonEmptyStrings, releaseVersions) { (repoName, releaseVersion) =>
+        (slugChecker
+          .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+          .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+          .returning(Right("Slug does not exist"))
+
+        (progressReporter.show(_: String)).expects("Slug does not exist")
+
+        (artifactChecker
+          .checkIfExists(_: RepositoryName, _: ReleaseVersion))
+          .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+          .returning(Right("Artifact exists"))
+
+        (progressReporter.show(_: String)).expects("Artifact exists")
+
         slugBuilder.create(repoName, releaseVersion)
       }
+    }
+
+    "stop slug creation if slug exists already" in new Setup {
+      val repoName       = nonEmptyStrings.generateOne
+      val releaseVersion = releaseVersions.generateOne
+
+      (slugChecker
+        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+        .returning(Left("Slug does exist"))
+
+      an[Exception] should be thrownBy slugBuilder.create(repoName, releaseVersion)
+    }
+
+    "stop slug creation if artifact does not exist" in new Setup {
+      val repoName       = nonEmptyStrings.generateOne
+      val releaseVersion = releaseVersions.generateOne
+
+      (slugChecker
+        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+        .returning(Right("Slug does not exist"))
+
+      (progressReporter.show(_: String)).expects("Slug does not exist")
+
+      (artifactChecker
+        .checkIfExists(_: RepositoryName, _: ReleaseVersion))
+        .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+        .returning(Left("Artifact does not exist"))
+
+      an[Exception] should be thrownBy slugBuilder.create(repoName, releaseVersion)
     }
 
     "throw an exception if repository name is blank" in new Setup {
@@ -42,6 +88,10 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks {
   }
 
   private trait Setup {
-    val slugBuilder = new SlugBuilder()
+    val slugChecker      = mock[SlugChecker]
+    val artifactChecker  = mock[ArtifactChecker]
+    val progressReporter = mock[ProgressReporter]
+
+    val slugBuilder = new SlugBuilder(slugChecker, artifactChecker, progressReporter)
   }
 }
