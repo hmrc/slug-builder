@@ -16,6 +16,35 @@
 
 package uk.gov.hmrc.slugbuilder
 
-class SlugChecker {
-  def checkIfDoesNotExist(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = ???
+import cats.data.EitherT
+import play.api.libs.ws._
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.control.NonFatal
+
+class SlugChecker(wSClient: StandaloneWSClient, webstoreUri: String, slugBuilderVersion: String) {
+
+  def checkIfDoesNotExist(
+    repositoryName: RepositoryName,
+    releaseVersion: ReleaseVersion): EitherT[Future, String, String] = {
+    val url = s"$webstoreUri/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+
+    EitherT[Future, String, String] {
+      wSClient
+        .url(url)
+        .get()
+        .map(_.status)
+        .map {
+          case 200    => Left(s"Slug already exists at: $url")
+          case 404    => Right("Slug does not exist")
+          case status => Left(s"Cannot check if slug exists at $url. Returned status $status")
+        }
+        .recover {
+          case NonFatal(exception) =>
+            Left(s"Cannot check if slug exists at $url. Got exception: ${exception.getMessage}")
+          case other => throw other
+        }
+    }
+  }
 }

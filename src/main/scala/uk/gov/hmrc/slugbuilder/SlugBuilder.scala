@@ -16,22 +16,29 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import cats.data.EitherT
 import cats.implicits._
-import play.api.LoggerLike
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class SlugBuilder(slugChecker: SlugChecker, artifactChecker: ArtifactChecker, progressReporter: ProgressReporter) {
 
-  def create(repoName: String, releaseVersion: String): Unit =
-    createSlug(RepositoryName(repoName), ReleaseVersion(releaseVersion)) leftMap (message =>
-      throw new RuntimeException(message))
+  def create(repoName: String, releaseVersion: String): EitherT[Future, Unit, Unit] =
+    createSlug(repoName, releaseVersion)
+      .leftMap(progressReporter.printError)
 
   // format: off
-  private def createSlug(repositoryName: RepositoryName, version: ReleaseVersion) =
+  private def createSlug(repoName: String, releaseVersion: String) =
     for {
+      repositoryName        <- EitherT.fromEither[Future](RepositoryName.create(repoName))
+      version               <- EitherT.fromEither[Future](ReleaseVersion.create(releaseVersion))
+
       slugDoesNotExist      <- slugChecker.checkIfDoesNotExist(repositoryName, version)
-      _                     = progressReporter.show(slugDoesNotExist)
+      _                     = progressReporter.printSuccess(slugDoesNotExist)
+
       artifactExistsMessage <- artifactChecker.checkIfExists(repositoryName, version)
-      _                     = progressReporter.show(artifactExistsMessage)
+      _                     = progressReporter.printSuccess(artifactExistsMessage)
     } yield ()
   // format: on
 }

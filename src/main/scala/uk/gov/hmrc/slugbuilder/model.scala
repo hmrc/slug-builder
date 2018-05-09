@@ -16,19 +16,38 @@
 
 package uk.gov.hmrc.slugbuilder
 
-case class RepositoryName(value: String) {
-  if (value.trim.isEmpty) throw new IllegalArgumentException("Blank repository name not allowed")
+import cats.implicits._
+
+case class RepositoryName private (value: String) {
+  override val toString: String = value
 }
 
-case class ReleaseVersion(value: String) {
+object RepositoryName {
+  def create(value: String): Either[String, RepositoryName] =
+    Either.cond(
+      test  = value.trim.nonEmpty,
+      right = RepositoryName(value),
+      left  = "Blank repository name not allowed"
+    )
+}
+
+case class ReleaseVersion private (value: String) {
+  override val toString: String = value
+}
+
+object ReleaseVersion {
+
   private val versionPattern = """(\d+)\.(\d+)\.(\d+)""".r
 
-  if (value.trim.isEmpty) throw new IllegalArgumentException("Blank release version not allowed")
-
-  val (major, minor, patch) = value match {
-    case versionPattern(majorVersion, minorVersion, patchVersion) => (majorVersion, minorVersion, patchVersion)
-    case _                                                        => throw new IllegalArgumentException(s"$value is not in 'NNN.NNN.NNN' format")
-  }
-
-  override val toString: String = value
+  def create(value: String): Either[String, ReleaseVersion] =
+    Either
+      .cond(
+        test  = value.trim.nonEmpty,
+        right = value,
+        left  = "Blank release version not allowed"
+      )
+      .flatMap {
+        case a @ versionPattern(majorVersion, minorVersion, patchVersion) => Right(ReleaseVersion(a))
+        case _                                                            => Left(s"$value is not in 'NNN.NNN.NNN' format")
+      }
 }

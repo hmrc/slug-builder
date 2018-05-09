@@ -16,14 +16,20 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import cats.data.EitherT._
+import cats.implicits._
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.prop.PropertyChecks
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
-class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory {
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with ScalaFutures {
 
   "create" should {
 
@@ -32,18 +38,18 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory {
         (slugChecker
           .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
           .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
-          .returning(Right("Slug does not exist"))
+          .returning(rightT[Future, String]("Slug does not exist"))
 
-        (progressReporter.show(_: String)).expects("Slug does not exist")
+        (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
         (artifactChecker
           .checkIfExists(_: RepositoryName, _: ReleaseVersion))
           .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
-          .returning(Right("Artifact exists"))
+          .returning(rightT[Future, String]("Artifact exists"))
 
-        (progressReporter.show(_: String)).expects("Artifact exists")
+        (progressReporter.printSuccess(_: String)).expects("Artifact exists")
 
-        slugBuilder.create(repoName, releaseVersion)
+        slugBuilder.create(repoName, releaseVersion).value.futureValue should be('right)
       }
     }
 
@@ -54,9 +60,11 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory {
       (slugChecker
         .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
         .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
-        .returning(Left("Slug does exist"))
+        .returning(leftT[Future, String]("Slug does exist"))
 
-      an[Exception] should be thrownBy slugBuilder.create(repoName, releaseVersion)
+      (progressReporter.printError(_: String)).expects("Slug does exist")
+
+      slugBuilder.create(repoName, releaseVersion).value.futureValue should be('left)
     }
 
     "stop slug creation if artifact does not exist" in new Setup {
@@ -66,24 +74,30 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory {
       (slugChecker
         .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
         .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
-        .returning(Right("Slug does not exist"))
+        .returning(rightT[Future, String]("Slug does not exist"))
 
-      (progressReporter.show(_: String)).expects("Slug does not exist")
+      (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
       (artifactChecker
         .checkIfExists(_: RepositoryName, _: ReleaseVersion))
         .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
-        .returning(Left("Artifact does not exist"))
+        .returning(leftT[Future, String]("Artifact does not exist"))
 
-      an[Exception] should be thrownBy slugBuilder.create(repoName, releaseVersion)
+      (progressReporter.printError(_: String)).expects("Artifact does not exist")
+
+      slugBuilder.create(repoName, releaseVersion).value.futureValue should be('left)
     }
 
-    "throw an exception if repository name is blank" in new Setup {
-      intercept[IllegalArgumentException](slugBuilder.create(" ", releaseVersions.generateOne)).getMessage shouldBe "Blank repository name not allowed"
+    "return left if repository name is blank" in new Setup {
+
+      (progressReporter.printError(_: String)).expects("Blank repository name not allowed")
+
+      slugBuilder.create(" ", releaseVersions.generateOne).value.futureValue should be('left)
     }
 
-    "throw an exception if release version is blank" in new Setup {
-      intercept[IllegalArgumentException](slugBuilder.create(nonEmptyStrings.generateOne, " ")).getMessage shouldBe "Blank release version not allowed"
+    "return left if release version is blank" in new Setup {
+      (progressReporter.printError(_: String)).expects("Blank release version not allowed")
+      slugBuilder.create(nonEmptyStrings.generateOne, " ").value.futureValue should be('left)
     }
   }
 

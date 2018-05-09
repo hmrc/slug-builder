@@ -16,11 +16,9 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import play.api.Logger
-
 class ProgressReporter {
 
-  def logFailure(message: String): Unit = Logger.error(message)
+  def printError(message: String): Unit = Console.err.println(message)
 
-  def show(message: String): Unit = Logger.info(message)
+  def printSuccess(message: String): Unit = Console.out.println(message)
 }

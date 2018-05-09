@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import cats.implicits._
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.prop.PropertyChecks
@@ -27,25 +28,17 @@ class ReleaseVersionSpec extends WordSpec with PropertyChecks {
 
     "instantiate an object if version is in the 'NNN.NNN.NNN' format" in {
       forAll(releaseVersions) { releaseVersion =>
-        ReleaseVersion(releaseVersion).toString shouldBe releaseVersion
+        ReleaseVersion.create(releaseVersion).map(_.toString) shouldBe Right(releaseVersion)
       }
     }
 
-    "provide major, minor and patch versions of the given release version" in {
-      val releaseVersion = ReleaseVersion("2.3.0")
-
-      releaseVersion.major shouldBe "2"
-      releaseVersion.minor shouldBe "3"
-      releaseVersion.patch shouldBe "0"
+    "return an error if release version is blank" in {
+      ReleaseVersion.create(" ") shouldBe Left("Blank release version not allowed")
     }
 
-    "throw an exception if release version is blank" in {
-      intercept[IllegalArgumentException](ReleaseVersion(" ")).getMessage shouldBe "Blank release version not allowed"
-    }
-
-    "unknown.format" +: "1.a.0" +: "a.b.c" +: "1.2.3.4" +: "1.2.3a" +: Nil foreach { version =>
+    "unknown.format" +: "1.a.0" +: "a.b.c" +: "1.2.3." +: "1.2.3a" +: Nil foreach { version =>
       s"throw an exception if '$version' version which is not in the 'NNN.NNN.NNN' format" in {
-        intercept[IllegalArgumentException](ReleaseVersion(version)).getMessage shouldBe s"$version is not in 'NNN.NNN.NNN' format"
+        ReleaseVersion.create(version) shouldBe Left(s"$version is not in 'NNN.NNN.NNN' format")
       }
     }
   }

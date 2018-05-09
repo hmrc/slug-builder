@@ -12,7 +12,7 @@ lazy val slugBuilder = Project(appName, file("."))
   .settings(defaultSettings(): _*)
   .settings(
     majorVersion := 0,
-    scalaVersion := "2.11.11",
+    scalaVersion := "2.11.12",
     libraryDependencies ++= compile ++ test,
     retrieveManaged := true,
     evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
@@ -22,7 +22,7 @@ lazy val slugBuilder = Project(appName, file("."))
 
 val compile = Seq(
   "org.typelevel"     %% "cats-core" % "1.0.1",
-  "com.typesafe.play" %% "play-ws"   % "2.5.12"
+  "com.typesafe.play" %% "play-ahc-ws-standalone" % "1.1.2"
 )
 
 val test = Seq(
