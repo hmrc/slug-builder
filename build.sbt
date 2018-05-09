@@ -1,4 +1,3 @@
-
 import sbt._
 import uk.gov.hmrc.DefaultBuildSettings.{defaultSettings, scalaSettings}
 import uk.gov.hmrc.SbtArtifactory
@@ -12,19 +11,20 @@ lazy val slugBuilder = Project(appName, file("."))
   .settings(scalaSettings: _*)
   .settings(defaultSettings(): _*)
   .settings(
-    majorVersion                                  := 0,
-    scalaVersion                                  := "2.11.11",
-    libraryDependencies                           ++= compile ++ test,
-    retrieveManaged                               := true,
-    evictionWarningOptions in update              := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
-    resolvers                                     += Resolver.bintrayRepo("hmrc", "releases"),
-    resolvers                                     += Resolver.jcenterRepo
+    majorVersion := 0,
+    scalaVersion := "2.11.11",
+    libraryDependencies ++= compile ++ test,
+    retrieveManaged := true,
+    evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
+    resolvers += Resolver.bintrayRepo("hmrc", "releases"),
+    resolvers += Resolver.jcenterRepo
   )
 
-
 val compile = Seq(
-)
+  )
 
-val test  = Seq(
-    "org.scalatest"          %% "scalatest"          % "3.0.5"              % Test
+val test = Seq(
+  "org.scalatest"  %% "scalatest"  % "3.0.5"  % Test,
+  "org.scalacheck" %% "scalacheck" % "1.14.0" % Test,
+  "org.pegdown"    % "pegdown"     % "1.4.2"  % Test
 )
