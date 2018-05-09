@@ -7,7 +7,7 @@ import uk.gov.hmrc.versioning.SbtGitVersioning.majorVersion
 
 val appName: String = "slug-builder"
 
-lazy val microservice = Project(appName, file("."))
+lazy val slugBuilder = Project(appName, file("."))
   .enablePlugins(Seq(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory): _*)
   .settings(scalaSettings: _*)
   .settings(defaultSettings(): _*)
