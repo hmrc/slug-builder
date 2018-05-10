@@ -33,7 +33,7 @@ class SlugChecker(wSClient: StandaloneWSClient, webstoreUri: String, slugBuilder
     EitherT[Future, String, String] {
       wSClient
         .url(url)
-        .get()
+        .head()
         .map(_.status)
         .map {
           case 200    => Left(s"Slug already exists at: $url")
@@ -43,7 +43,6 @@ class SlugChecker(wSClient: StandaloneWSClient, webstoreUri: String, slugBuilder
         .recover {
           case NonFatal(exception) =>
             Left(s"Cannot check if slug exists at $url. Got exception: ${exception.getMessage}")
-          case other => throw other
         }
     }
   }

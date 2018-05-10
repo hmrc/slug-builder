@@ -31,7 +31,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
   "checkIfDoesNotExist" should {
 
     "return Left if slug already exists" in new Setup {
-      (wsRequest.get _)
+      (wsRequest.head _)
         .expects()
         .returning(Future.successful(wsResponse))
 
@@ -44,7 +44,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
     }
 
     "return Right if slug does not exist" in new Setup {
-      (wsRequest.get _)
+      (wsRequest.head _)
         .expects()
         .returning(Future.successful(wsResponse))
 
@@ -58,7 +58,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
 
     201 +: 400 +: 500 +: Nil foreach { status =>
       s"return Left when got $status status from checking if slug exists" in new Setup {
-        (wsRequest.get _)
+        (wsRequest.head _)
           .expects()
           .returning(Future.successful(wsResponse))
 
@@ -73,7 +73,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
 
     "return Left if calling webstore results in an exception" in new Setup {
       val exception = new Exception("some error")
-      (wsRequest.get _)
+      (wsRequest.head _)
         .expects()
         .returning(Future.failed(exception))
 
