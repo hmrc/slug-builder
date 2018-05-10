@@ -3,7 +3,15 @@
 
  [ ![Download](https://api.bintray.com/packages/hmrc/releases/slug-builder/images/download.svg) ](https://bintray.com/hmrc/releases/slug-builder/_latestVersion)
 
-This is a placeholder README.md for a new repository
+This is a tool to create and publish 'Slug' artifacts for a given microservice.
+
+# How to build
+
+`sbt assembly`
+
+# How to create an slug
+
+`java -jar target/scala-2.11/slug-builder.jar repo-name x.x.x`
 
 ### License
 

@@ -26,20 +26,36 @@ import scala.language.postfixOps
 
 object Main {
 
-  private implicit val system: ActorSystem = ActorSystem()
+  private implicit val system: ActorSystem    = ActorSystem()
   private implicit val mat: ActorMaterializer = ActorMaterializer()
 
+  private val progressReporter = new ProgressReporter()
   private val slugBuilder = new SlugBuilder(
-    new SlugChecker(StandaloneAhcWSClient(), "webstoreUri", "0.5.2"),
+    new SlugChecker(
+      StandaloneAhcWSClient(),
+      "https://lab03.artefacts.tax.service.gov.uk/artifactory/webstore",
+      "0.5.2"),
     new ArtifactChecker(),
-    new ProgressReporter())
+    progressReporter
+  )
 
-  def main(args: Array[String]): Unit =
-    Await.result(
-        slugBuilder.create(args(0), args(1)).value,
-        atMost = 2 minutes)
+  def main(args: Array[String]): Unit = {
+
+    val (repositoryName, releaseVersion) = verifyArgs(args)
+
+    Await
+      .result(slugBuilder.create(repositoryName, releaseVersion).value, atMost = 2 minutes)
       .fold(
         _ => System.exit(1),
         _ => System.exit(0)
       )
+  }
+
+  private def verifyArgs(args: Array[String]) = {
+    if (args.length != 2) {
+      progressReporter.printError("'repository name' and 'release version' arguments needed.")
+      System.exit(1)
+    }
+    (args(0), args(1))
+  }
 }
