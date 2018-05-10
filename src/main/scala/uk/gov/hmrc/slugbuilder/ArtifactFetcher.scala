@@ -19,6 +19,6 @@ package uk.gov.hmrc.slugbuilder
 import cats.data.EitherT
 import scala.concurrent.Future
 
-class ArtifactChecker {
-  def checkIfExists(repositoryName: RepositoryName, version: ReleaseVersion): EitherT[Future, String, String] = ???
+class ArtifactFetcher {
+  def fetch(repositoryName: RepositoryName, version: ReleaseVersion): EitherT[Future, String, String] = ???
 }

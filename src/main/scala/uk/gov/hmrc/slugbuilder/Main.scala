@@ -37,7 +37,7 @@ object Main {
       StandaloneAhcWSClient(),
       environmentVariables.webstoreUri.getOrExit,
       environmentVariables.slugBuilderVersion.getOrExit),
-    new ArtifactChecker(),
+    new ArtifactFetcher(),
     progressReporter
   )
 

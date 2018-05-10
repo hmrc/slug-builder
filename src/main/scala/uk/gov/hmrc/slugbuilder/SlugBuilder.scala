@@ -22,7 +22,7 @@ import cats.implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SlugBuilder(slugChecker: SlugChecker, artifactChecker: ArtifactChecker, progressReporter: ProgressReporter) {
+class SlugBuilder(slugChecker: SlugChecker, artifactFetcher: ArtifactFetcher, progressReporter: ProgressReporter) {
 
   def create(repoName: String, releaseVersion: String): EitherT[Future, Unit, Unit] =
     createSlug(repoName, releaseVersion)
@@ -37,8 +37,8 @@ class SlugBuilder(slugChecker: SlugChecker, artifactChecker: ArtifactChecker, pr
       slugDoesNotExist      <- slugChecker.checkIfDoesNotExist(repositoryName, version)
       _                     = progressReporter.printSuccess(slugDoesNotExist)
 
-      artifactExistsMessage <- artifactChecker.checkIfExists(repositoryName, version)
-      _                     = progressReporter.printSuccess(artifactExistsMessage)
+      artifactFetchMessage  <- artifactFetcher.fetch(repositoryName, version)
+      _                     = progressReporter.printSuccess(artifactFetchMessage)
     } yield ()
   // format: on
 }

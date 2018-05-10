@@ -42,8 +42,8 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
 
         (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
-        (artifactChecker
-          .checkIfExists(_: RepositoryName, _: ReleaseVersion))
+        (artifactFetcher
+          .fetch(_: RepositoryName, _: ReleaseVersion))
           .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
           .returning(rightT[Future, String]("Artifact exists"))
 
@@ -78,8 +78,8 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
 
       (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
-      (artifactChecker
-        .checkIfExists(_: RepositoryName, _: ReleaseVersion))
+      (artifactFetcher
+        .fetch(_: RepositoryName, _: ReleaseVersion))
         .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
         .returning(leftT[Future, String]("Artifact does not exist"))
 
@@ -103,9 +103,9 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
 
   private trait Setup {
     val slugChecker      = mock[SlugChecker]
-    val artifactChecker  = mock[ArtifactChecker]
+    val artifactFetcher  = mock[ArtifactFetcher]
     val progressReporter = mock[ProgressReporter]
 
-    val slugBuilder = new SlugBuilder(slugChecker, artifactChecker, progressReporter)
+    val slugBuilder = new SlugBuilder(slugChecker, artifactFetcher, progressReporter)
   }
 }
