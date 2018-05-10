@@ -48,6 +48,6 @@ object ReleaseVersion {
       )
       .flatMap {
         case a @ versionPattern(majorVersion, minorVersion, patchVersion) => Right(ReleaseVersion(a))
-        case _                                                            => Left(s"$value is not in 'NNN.NNN.NNN' format")
+        case _                                                            => Left(s"$value is not in valid release version format ('NNN.NNN.NNN')")
       }
 }

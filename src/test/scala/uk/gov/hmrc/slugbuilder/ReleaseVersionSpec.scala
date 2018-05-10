@@ -38,7 +38,7 @@ class ReleaseVersionSpec extends WordSpec with PropertyChecks {
 
     "unknown.format" +: "1.a.0" +: "a.b.c" +: "1.2.3." +: "1.2.3a" +: Nil foreach { version =>
       s"throw an exception if '$version' version which is not in the 'NNN.NNN.NNN' format" in {
-        ReleaseVersion.create(version) shouldBe Left(s"$version is not in 'NNN.NNN.NNN' format")
+        ReleaseVersion.create(version) shouldBe Left(s"$version is not in valid release version format ('NNN.NNN.NNN')")
       }
     }
   }
