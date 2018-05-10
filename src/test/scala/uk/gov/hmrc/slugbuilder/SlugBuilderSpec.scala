@@ -43,7 +43,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
         (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
         (artifactFetcher
-          .fetch(_: RepositoryName, _: ReleaseVersion))
+          .download(_: RepositoryName, _: ReleaseVersion))
           .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
           .returning(rightT[Future, String]("Artifact exists"))
 
@@ -79,7 +79,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
       (artifactFetcher
-        .fetch(_: RepositoryName, _: ReleaseVersion))
+        .download(_: RepositoryName, _: ReleaseVersion))
         .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
         .returning(leftT[Future, String]("Artifact does not exist"))
 

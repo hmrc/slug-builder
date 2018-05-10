@@ -27,23 +27,22 @@ class SlugChecker(wSClient: StandaloneWSClient, webstoreUri: String, slugBuilder
 
   def checkIfDoesNotExist(
     repositoryName: RepositoryName,
-    releaseVersion: ReleaseVersion): EitherT[Future, String, String] = {
+    releaseVersion: ReleaseVersion): EitherT[Future, String, String] = EitherT[Future, String, String] {
+
     val url = s"$webstoreUri/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
 
-    EitherT[Future, String, String] {
-      wSClient
-        .url(url)
-        .head()
-        .map(_.status)
-        .map {
-          case 200    => Left(s"Slug already exists at: $url")
-          case 404    => Right("Slug does not exist")
-          case status => Left(s"Cannot check if slug exists at $url. Returned status $status")
-        }
-        .recover {
-          case NonFatal(exception) =>
-            Left(s"Cannot check if slug exists at $url. Got exception: ${exception.getMessage}")
-        }
-    }
+    wSClient
+      .url(url)
+      .head()
+      .map(_.status)
+      .map {
+        case 200    => Left(s"Slug already exists at: $url")
+        case 404    => Right("Slug does not exist")
+        case status => Left(s"Cannot check if slug exists at $url. Returned status $status")
+      }
+      .recover {
+        case NonFatal(exception) =>
+          Left(s"Cannot check if slug exists at $url. Got exception: ${exception.getMessage}")
+      }
   }
 }

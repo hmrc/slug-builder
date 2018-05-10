@@ -21,6 +21,7 @@ import cats.implicits._
 class EnvironmentVariables(progressReporter: ProgressReporter) {
 
   val webstoreUri: Either[String, String]        = findVariable("WEBSTORE_URI")
+  val artifactoryUri: Either[String, String]     = findVariable("ARTIFACTORY_URI")
   val slugBuilderVersion: Either[String, String] = findVariable("SLUG_BUILDER_VERSION")
 
   private def findVariable(name: String): Either[String, String] = Either.fromOption(

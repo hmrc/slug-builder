@@ -31,14 +31,14 @@ class SlugBuilder(slugChecker: SlugChecker, artifactFetcher: ArtifactFetcher, pr
   // format: off
   private def createSlug(repoName: String, releaseVersion: String) =
     for {
-      repositoryName        <- EitherT.fromEither[Future](RepositoryName.create(repoName))
-      version               <- EitherT.fromEither[Future](ReleaseVersion.create(releaseVersion))
+      repositoryName           <- EitherT.fromEither[Future](RepositoryName.create(repoName))
+      version                  <- EitherT.fromEither[Future](ReleaseVersion.create(releaseVersion))
 
-      slugDoesNotExist      <- slugChecker.checkIfDoesNotExist(repositoryName, version)
-      _                     = progressReporter.printSuccess(slugDoesNotExist)
+      slugDoesNotExist         <- slugChecker.checkIfDoesNotExist(repositoryName, version)
+      _                        = progressReporter.printSuccess(slugDoesNotExist)
 
-      artifactFetchMessage  <- artifactFetcher.fetch(repositoryName, version)
-      _                     = progressReporter.printSuccess(artifactFetchMessage)
+      artifactDownloadMessage  <- artifactFetcher.download(repositoryName, version)
+      _                        = progressReporter.printSuccess(artifactDownloadMessage)
     } yield ()
   // format: on
 }

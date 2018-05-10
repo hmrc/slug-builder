@@ -32,12 +32,17 @@ object Main {
   private val progressReporter     = new ProgressReporter()
   private val environmentVariables = new EnvironmentVariables(progressReporter)
 
+  private val httpClient = StandaloneAhcWSClient()
+
   private val slugBuilder = new SlugBuilder(
     new SlugChecker(
-      StandaloneAhcWSClient(),
+      httpClient,
       environmentVariables.webstoreUri.getOrExit,
       environmentVariables.slugBuilderVersion.getOrExit),
-    new ArtifactFetcher(),
+    new ArtifactFetcher(
+      httpClient,
+      environmentVariables.artifactoryUri.getOrExit
+    ),
     progressReporter
   )
 
