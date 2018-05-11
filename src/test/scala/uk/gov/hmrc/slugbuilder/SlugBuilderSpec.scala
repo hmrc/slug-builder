@@ -34,32 +34,32 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
   "create" should {
 
     "check if the slug does not exist" in new Setup {
-      forAll(nonEmptyStrings, releaseVersions) { (repoName, releaseVersion) =>
+      forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
         (slugChecker
           .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
-          .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+          .expects(repositoryName, releaseVersion)
           .returning(rightT[Future, String]("Slug does not exist"))
 
         (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
         (artifactFetcher
           .download(_: RepositoryName, _: ReleaseVersion))
-          .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+          .expects(repositoryName, releaseVersion)
           .returning(rightT[Future, String]("Artifact exists"))
 
         (progressReporter.printSuccess(_: String)).expects("Artifact exists")
 
-        slugBuilder.create(repoName, releaseVersion).value.futureValue should be('right)
+        slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('right)
       }
     }
 
     "stop slug creation if slug exists already" in new Setup {
-      val repoName       = nonEmptyStrings.generateOne
-      val releaseVersion = releaseVersions.generateOne
+      val repoName       = repositoryNameGen.generateOne
+      val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
         .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
-        .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+        .expects(repoName, releaseVersion)
         .returning(leftT[Future, String]("Slug does exist"))
 
       (progressReporter.printError(_: String)).expects("Slug does exist")
@@ -68,36 +68,24 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
     }
 
     "stop slug creation if artifact does not exist" in new Setup {
-      val repoName       = nonEmptyStrings.generateOne
-      val releaseVersion = releaseVersions.generateOne
+      val repoName       = repositoryNameGen.generateOne
+      val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
         .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
-        .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+        .expects(repoName, releaseVersion)
         .returning(rightT[Future, String]("Slug does not exist"))
 
       (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
       (artifactFetcher
         .download(_: RepositoryName, _: ReleaseVersion))
-        .expects(RepositoryName(repoName), ReleaseVersion(releaseVersion))
+        .expects(repoName, releaseVersion)
         .returning(leftT[Future, String]("Artifact does not exist"))
 
       (progressReporter.printError(_: String)).expects("Artifact does not exist")
 
       slugBuilder.create(repoName, releaseVersion).value.futureValue should be('left)
-    }
-
-    "return left if repository name is blank" in new Setup {
-
-      (progressReporter.printError(_: String)).expects("Blank repository name not allowed")
-
-      slugBuilder.create(" ", releaseVersions.generateOne).value.futureValue should be('left)
-    }
-
-    "return left if release version is blank" in new Setup {
-      (progressReporter.printError(_: String)).expects("Blank release version not allowed")
-      slugBuilder.create(nonEmptyStrings.generateOne, " ").value.futureValue should be('left)
     }
   }
 

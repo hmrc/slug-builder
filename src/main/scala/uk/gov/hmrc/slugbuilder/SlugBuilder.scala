@@ -24,21 +24,12 @@ import scala.concurrent.Future
 
 class SlugBuilder(slugChecker: SlugChecker, artifactFetcher: ArtifactFetcher, progressReporter: ProgressReporter) {
 
-  def create(repoName: String, releaseVersion: String): EitherT[Future, Unit, Unit] =
-    createSlug(repoName, releaseVersion)
-      .leftMap(progressReporter.printError)
+  import progressReporter._
 
-  // format: off
-  private def createSlug(repoName: String, releaseVersion: String) =
+  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, Unit, Unit] = {
     for {
-      repositoryName           <- EitherT.fromEither[Future](RepositoryName.create(repoName))
-      version                  <- EitherT.fromEither[Future](ReleaseVersion.create(releaseVersion))
-
-      slugDoesNotExist         <- slugChecker.checkIfDoesNotExist(repositoryName, version)
-      _                        = progressReporter.printSuccess(slugDoesNotExist)
-
-      artifactDownloadMessage  <- artifactFetcher.download(repositoryName, version)
-      _                        = progressReporter.printSuccess(artifactDownloadMessage)
+      _ <- slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion) map printSuccess
+      _ <- artifactFetcher.download(repositoryName, releaseVersion) map printSuccess
     } yield ()
-  // format: on
+  }.leftMap(printError)
 }

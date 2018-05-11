@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import cats.implicits._
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
@@ -48,8 +49,8 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    val repositoryName = args.getOrExit(0, "Repository name")
-    val releaseVersion = args.getOrExit(1, "Release version")
+    val repositoryName = args.get("Repository name", atIdx = 0).flatMap(RepositoryName.create).getOrExit
+    val releaseVersion = args.get("Release version", atIdx = 1).flatMap(ReleaseVersion.create).getOrExit
 
     Await
       .result(slugBuilder.create(repositoryName, releaseVersion).value, atMost = 2 minutes)
@@ -61,17 +62,16 @@ object Main {
 
   private implicit class ArgsOps(args: Array[String]) {
 
-    def getOrExit(index: Int, argName: String): String =
-      if (index >= args.length) {
-        progressReporter.printError(s"'$argName' required as argument ${index + 1}.")
-        sys.exit(1)
+    def get(argName: String, atIdx: Int): Either[String, String] =
+      if (atIdx >= args.length) {
+        Left(s"'$argName' required as argument ${atIdx + 1}.")
       } else
-        args(index)
+        Right(args(atIdx))
   }
 
-  private implicit class EitherOps(either: Either[String, String]) {
+  private implicit class EitherOps[T](either: Either[String, T]) {
 
-    lazy val getOrExit: String =
+    lazy val getOrExit: T =
       either.fold(
         error => {
           progressReporter.printError(error)
