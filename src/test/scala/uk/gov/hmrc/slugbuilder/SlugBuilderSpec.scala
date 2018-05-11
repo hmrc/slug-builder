@@ -33,7 +33,10 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
 
   "create" should {
 
-    "check if the slug does not exist" in new Setup {
+    "finish successfully if " +
+      "slug for the given version of the microservice does not exist and " +
+      "microservice artifact can be downloaded and " +
+      "app-config-base can be downloaded" in new Setup {
       forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
         (slugChecker
           .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
@@ -45,55 +48,91 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
         (artifactFetcher
           .download(_: RepositoryName, _: ReleaseVersion))
           .expects(repositoryName, releaseVersion)
-          .returning(rightT[Future, String]("Artifact exists"))
+          .returning(rightT[Future, String]("Artifact downloaded"))
 
-        (progressReporter.printSuccess(_: String)).expects("Artifact exists")
+        (progressReporter.printSuccess(_: String)).expects("Artifact downloaded")
+
+        (appConfigBaseFetcher
+          .download(_: RepositoryName))
+          .expects(repositoryName)
+          .returning(rightT[Future, String]("app-config-base downloaded"))
+
+        (progressReporter.printSuccess(_: String)).expects("app-config-base downloaded")
 
         slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('right)
       }
     }
 
-    "stop slug creation if slug exists already" in new Setup {
-      val repoName       = repositoryNameGen.generateOne
+    "not create the slug if it already exists in the Webstore" in new Setup {
+      val repositoryName = repositoryNameGen.generateOne
       val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
         .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
-        .expects(repoName, releaseVersion)
+        .expects(repositoryName, releaseVersion)
         .returning(leftT[Future, String]("Slug does exist"))
 
       (progressReporter.printError(_: String)).expects("Slug does exist")
 
-      slugBuilder.create(repoName, releaseVersion).value.futureValue should be('left)
+      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
     }
 
-    "stop slug creation if artifact does not exist" in new Setup {
-      val repoName       = repositoryNameGen.generateOne
+    "not create the slug if there is no artifact in the Artifactory" in new Setup {
+      val repositoryName = repositoryNameGen.generateOne
       val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
         .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
-        .expects(repoName, releaseVersion)
+        .expects(repositoryName, releaseVersion)
         .returning(rightT[Future, String]("Slug does not exist"))
 
       (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
 
       (artifactFetcher
         .download(_: RepositoryName, _: ReleaseVersion))
-        .expects(repoName, releaseVersion)
+        .expects(repositoryName, releaseVersion)
         .returning(leftT[Future, String]("Artifact does not exist"))
 
       (progressReporter.printError(_: String)).expects("Artifact does not exist")
 
-      slugBuilder.create(repoName, releaseVersion).value.futureValue should be('left)
+      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
+    }
+
+    "not create the slug if there is app-config-base in the Webstore" in new Setup {
+      val repositoryName = repositoryNameGen.generateOne
+      val releaseVersion = releaseVersionGen.generateOne
+
+      (slugChecker
+        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .expects(repositoryName, releaseVersion)
+        .returning(rightT[Future, String]("Slug does not exist"))
+
+      (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
+
+      (artifactFetcher
+        .download(_: RepositoryName, _: ReleaseVersion))
+        .expects(repositoryName, releaseVersion)
+        .returning(rightT[Future, String]("Artifact downloaded"))
+
+      (progressReporter.printSuccess(_: String)).expects("Artifact downloaded")
+
+      (appConfigBaseFetcher
+        .download(_: RepositoryName))
+        .expects(repositoryName)
+        .returning(leftT[Future, String]("app-config-base does not exist"))
+
+      (progressReporter.printError(_: String)).expects("app-config-base does not exist")
+
+      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
     }
   }
 
   private trait Setup {
-    val slugChecker      = mock[SlugChecker]
-    val artifactFetcher  = mock[ArtifactFetcher]
-    val progressReporter = mock[ProgressReporter]
+    val progressReporter     = mock[ProgressReporter]
+    val slugChecker          = mock[SlugChecker]
+    val artifactFetcher      = mock[ArtifactFetcher]
+    val appConfigBaseFetcher = mock[AppConfigBaseFetcher]
 
-    val slugBuilder = new SlugBuilder(slugChecker, artifactFetcher, progressReporter)
+    val slugBuilder = new SlugBuilder(progressReporter, slugChecker, artifactFetcher, appConfigBaseFetcher)
   }
 }

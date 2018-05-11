@@ -31,20 +31,17 @@ object Main {
   private implicit val mat: ActorMaterializer = ActorMaterializer()
 
   private val progressReporter     = new ProgressReporter()
-  private val environmentVariables = new EnvironmentVariables(progressReporter)
+  private val httpClient           = StandaloneAhcWSClient()
 
-  private val httpClient = StandaloneAhcWSClient()
+  private val webstoreUri        = EnvironmentVariables.webstoreUri.getOrExit
+  private val slugBuilderVersion = EnvironmentVariables.slugBuilderVersion.getOrExit
+  private val artifactoryUri     = EnvironmentVariables.artifactoryUri.getOrExit
 
   private val slugBuilder = new SlugBuilder(
-    new SlugChecker(
-      httpClient,
-      environmentVariables.webstoreUri.getOrExit,
-      environmentVariables.slugBuilderVersion.getOrExit),
-    new ArtifactFetcher(
-      httpClient,
-      environmentVariables.artifactoryUri.getOrExit
-    ),
-    progressReporter
+    progressReporter,
+    new SlugChecker(httpClient, webstoreUri, slugBuilderVersion),
+    new ArtifactFetcher(httpClient, artifactoryUri),
+    new AppConfigBaseFetcher(httpClient, webstoreUri)
   )
 
   def main(args: Array[String]): Unit = {

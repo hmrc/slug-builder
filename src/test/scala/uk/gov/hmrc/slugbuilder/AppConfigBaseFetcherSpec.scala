@@ -28,15 +28,15 @@ import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.ws.StandaloneWSClient
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
-import uk.gov.hmrc.slugbuilder.generators.Generators._
+import uk.gov.hmrc.slugbuilder.generators.Generators.{releaseVersionGen, repositoryNameGen}
 
 import scala.concurrent.Future
 
-class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
+class AppConfigBaseFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
 
   "download" should {
 
-    "return Right if artifact can be downloaded from Artifactory successfully" in new Setup {
+    "return Right if service's app-config-base can be downloaded from Webstore successfully" in new Setup {
       (wsRequest.get _)
         .expects()
         .returning(Future.successful(wsResponse))
@@ -45,15 +45,15 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(200)
 
-      val artifactContent = ByteString("some content")
+      val appConfigBaseContent = ByteString("some content")
       (wsResponse.bodyAsSource _)
         .expects()
-        .returning(Source.single(artifactContent))
+        .returning(Source.single(appConfigBaseContent))
 
-      artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
-        Right(s"Artifact successfully downloaded from $url")
+      appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
+        Right(s"app-config-base successfully downloaded from $url")
 
-      val pathToDownloadedFile = Paths.get(s"$repositoryName-$releaseVersion.tgz")
+      val pathToDownloadedFile = Paths.get(s"$repositoryName.conf")
       pathToDownloadedFile.toFile.deleteOnExit()
 
       Files.exists(pathToDownloadedFile) shouldBe true
@@ -61,10 +61,10 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
       FileIO
         .fromPath(pathToDownloadedFile)
         .runWith(Sink.fold(ByteString.empty)((content, line) => content concat line))
-        .futureValue shouldBe artifactContent
+        .futureValue shouldBe appConfigBaseContent
     }
 
-    "return Left if artifact cannot be downloaded from Artifactory successfully" in new Setup {
+    "return Left if app-config-base cannot be downloaded from Webstore" in new Setup {
       (wsRequest.get _)
         .expects()
         .returning(Future.successful(wsResponse))
@@ -78,13 +78,13 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(Source.failed(downloadingException))
 
-      artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
-        Left(s"Artifact couldn't be downloaded from $url. Cause: ${downloadingException.getMessage}")
+      appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
+        Left(s"app-config-base couldn't be downloaded from $url. Cause: ${downloadingException.getMessage}")
 
-      Paths.get(s"$repositoryName-$releaseVersion.tgz").toFile.deleteOnExit()
+      Paths.get(s"$repositoryName.conf").toFile.deleteOnExit()
     }
 
-    "return Left if artifact does not exist" in new Setup {
+    "return Left if app-config-base does not exist" in new Setup {
       (wsRequest.get _)
         .expects()
         .returning(Future.successful(wsResponse))
@@ -93,12 +93,12 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(404)
 
-      artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
-        Left(s"Artifact does not exist at: $url")
+      appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
+        Left(s"app-config-base does not exist at: $url")
     }
 
     201 +: 400 +: 500 +: Nil foreach { status =>
-      s"return Left when got $status status from fetching artifact" in new Setup {
+      s"return Left when got $status status from fetching app-config-base" in new Setup {
         (wsRequest.get _)
           .expects()
           .returning(Future.successful(wsResponse))
@@ -107,28 +107,26 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
           .expects()
           .returning(status)
 
-        artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
-          Left(s"Cannot fetch artifact from $url. Returned status $status")
+        appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
+          Left(s"Cannot fetch app-config-base from $url. Returned status $status")
       }
     }
 
-    "return Left if fetching artifact results in an exception" in new Setup {
+    "return Left if fetching app-config-base results in an exception" in new Setup {
       val exception = new Exception("some error")
       (wsRequest.get _)
         .expects()
         .returning(Future.failed(exception))
 
-      artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
-        Left(s"Cannot fetch artifact from $url. Got exception: ${exception.getMessage}")
+      appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
+        Left(s"Cannot fetch app-config-base from $url. Got exception: ${exception.getMessage}")
     }
   }
 
   private trait Setup {
-    val artifactoryUri = "artifactoryUri"
+    val webstoreUri    = "webstoreUri"
     val repositoryName = repositoryNameGen.generateOne
-    val releaseVersion = releaseVersionGen.generateOne
-    val url =
-      s"$artifactoryUri/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
+    val url            = s"$webstoreUri/app-config-base/$repositoryName.conf"
 
     implicit val system: ActorSystem    = ActorSystem()
     implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -136,7 +134,7 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
     val wsRequest                       = mock[TestWSRequest]
     val wsResponse                      = mock[wsRequest.Response]
 
-    val artifactFetcher = new ArtifactFetcher(wsClient, artifactoryUri)
+    val appConfigBaseFetcher = new AppConfigBaseFetcher(wsClient, webstoreUri)
 
     (wsClient
       .url(_: String))

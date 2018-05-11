@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.file.Paths
-
-import akka.stream.scaladsl.FileIO
 import akka.stream.{IOResult, Materializer}
 import cats.data.EitherT
-import play.api.libs.ws.{StandaloneWSClient, StandaloneWSResponse}
+import play.api.libs.ws.StandaloneWSClient
+import uk.gov.hmrc.slugbuilder.tools.HttpClientTools._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -55,16 +53,4 @@ class ArtifactFetcher(wSClient: StandaloneWSClient, artifactoryUri: String)(impl
             Left(s"Cannot fetch artifact from $url. Got exception: ${exception.getMessage}")
         }
     }
-
-  private implicit class ResponseOps(response: StandaloneWSResponse) {
-    def toFile(fileName: String)(
-      onSuccess: => Either[String, String],
-      onFailure: IOResult => Either[String, String]): Future[Either[String, String]] =
-      response.bodyAsSource
-        .runWith(FileIO.toPath(Paths.get(fileName)))
-        .map { ioResult =>
-          if (ioResult.wasSuccessful) onSuccess
-          else onFailure(ioResult)
-        }
-  }
 }

@@ -22,7 +22,11 @@ import cats.implicits._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class SlugBuilder(slugChecker: SlugChecker, artifactFetcher: ArtifactFetcher, progressReporter: ProgressReporter) {
+class SlugBuilder(
+  progressReporter: ProgressReporter,
+  slugChecker: SlugChecker,
+  artifactFetcher: ArtifactFetcher,
+  appConfigBaseFetcher: AppConfigBaseFetcher) {
 
   import progressReporter._
 
@@ -30,6 +34,7 @@ class SlugBuilder(slugChecker: SlugChecker, artifactFetcher: ArtifactFetcher, pr
     for {
       _ <- slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion) map printSuccess
       _ <- artifactFetcher.download(repositoryName, releaseVersion) map printSuccess
+      _ <- appConfigBaseFetcher.download(repositoryName) map printSuccess
     } yield ()
   }.leftMap(printError)
 }

@@ -16,16 +16,9 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.implicits._
+import play.api.libs.ws.{StandaloneWSRequest, StandaloneWSResponse}
 
-object EnvironmentVariables {
-
-  val webstoreUri: Either[String, String]        = findVariable("WEBSTORE_URI")
-  val artifactoryUri: Either[String, String]     = findVariable("ARTIFACTORY_URI")
-  val slugBuilderVersion: Either[String, String] = findVariable("SLUG_BUILDER_VERSION")
-
-  private def findVariable(name: String): Either[String, String] = Either.fromOption(
-    sys.env.get(name),
-    ifNone = s"No '$name' environment variable found"
-  )
+private trait TestWSRequest extends StandaloneWSRequest {
+  override type Self     = TestWSRequest
+  override type Response = StandaloneWSResponse
 }
