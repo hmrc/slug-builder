@@ -26,7 +26,8 @@ class SlugBuilder(
   progressReporter: ProgressReporter,
   slugChecker: SlugChecker,
   artifactFetcher: ArtifactFetcher,
-  appConfigBaseFetcher: AppConfigBaseFetcher) {
+  appConfigBaseFetcher: AppConfigBaseFetcher,
+  slugFileAssembler: SlugFileAssembler) {
 
   import progressReporter._
 
@@ -35,6 +36,7 @@ class SlugBuilder(
       _ <- slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion) map printSuccess
       _ <- artifactFetcher.download(repositoryName, releaseVersion) map printSuccess
       _ <- appConfigBaseFetcher.download(repositoryName) map printSuccess
+      _ <- slugFileAssembler.assemble(repositoryName, releaseVersion) map printSuccess
     } yield ()
   }.leftMap(printError)
 }

@@ -97,18 +97,20 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
         Left(s"Artifact does not exist at: $url")
     }
 
-    201 +: 400 +: 500 +: Nil foreach { status =>
-      s"return Left when got $status status from fetching artifact" in new Setup {
-        (wsRequest.get _)
-          .expects()
-          .returning(Future.successful(wsResponse))
+    "return Left when got unexpected status from fetching artifact" in {
+      allHttpStatusCodes filterNot Seq(200, 404).contains foreach { status =>
+        new Setup {
+          (wsRequest.get _)
+            .expects()
+            .returning(Future.successful(wsResponse))
 
-        (wsResponse.status _)
-          .expects()
-          .returning(status)
+          (wsResponse.status _)
+            .expects()
+            .returning(status)
 
-        artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
-          Left(s"Cannot fetch artifact from $url. Returned status $status")
+          artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
+            Left(s"Cannot fetch artifact from $url. Returned status $status")
+        }
       }
     }
 

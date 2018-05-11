@@ -36,7 +36,8 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
     "finish successfully if " +
       "slug for the given version of the microservice does not exist and " +
       "microservice artifact can be downloaded and " +
-      "app-config-base can be downloaded" in new Setup {
+      "app-config-base can be downloaded and " +
+      "a slug file is assembled" in new Setup {
       forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
         (slugChecker
           .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
@@ -58,6 +59,13 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
           .returning(rightT[Future, String]("app-config-base downloaded"))
 
         (progressReporter.printSuccess(_: String)).expects("app-config-base downloaded")
+
+        (slugFileAssembler
+          .assemble(_: RepositoryName, _: ReleaseVersion))
+          .expects(repositoryName, releaseVersion)
+          .returning(rightT[Future, String]("Slug assembled"))
+
+        (progressReporter.printSuccess(_: String)).expects("Slug assembled")
 
         slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('right)
       }
@@ -125,6 +133,41 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
 
       slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
     }
+
+    "not create the slug if slug assembly step failed" in new Setup {
+      val repositoryName = repositoryNameGen.generateOne
+      val releaseVersion = releaseVersionGen.generateOne
+
+      (slugChecker
+        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .expects(repositoryName, releaseVersion)
+        .returning(rightT[Future, String]("Slug does not exist"))
+
+      (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
+
+      (artifactFetcher
+        .download(_: RepositoryName, _: ReleaseVersion))
+        .expects(repositoryName, releaseVersion)
+        .returning(rightT[Future, String]("Artifact downloaded"))
+
+      (progressReporter.printSuccess(_: String)).expects("Artifact downloaded")
+
+      (appConfigBaseFetcher
+        .download(_: RepositoryName))
+        .expects(repositoryName)
+        .returning(rightT[Future, String]("app-config-base downloaded"))
+
+      (progressReporter.printSuccess(_: String)).expects("app-config-base downloaded")
+
+      (slugFileAssembler
+        .assemble(_: RepositoryName, _: ReleaseVersion))
+        .expects(repositoryName, releaseVersion)
+        .returning(leftT[Future, String]("Slug file assembly failure"))
+
+      (progressReporter.printError(_: String)).expects("Slug file assembly failure")
+
+      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
+    }
   }
 
   private trait Setup {
@@ -132,7 +175,14 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
     val slugChecker          = mock[SlugChecker]
     val artifactFetcher      = mock[ArtifactFetcher]
     val appConfigBaseFetcher = mock[AppConfigBaseFetcher]
+    val slugFileAssembler    = mock[SlugFileAssembler]
 
-    val slugBuilder = new SlugBuilder(progressReporter, slugChecker, artifactFetcher, appConfigBaseFetcher)
+    val slugBuilder = new SlugBuilder(
+      progressReporter,
+      slugChecker,
+      artifactFetcher,
+      appConfigBaseFetcher,
+      slugFileAssembler
+    )
   }
 }

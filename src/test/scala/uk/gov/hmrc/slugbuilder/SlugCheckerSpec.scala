@@ -20,7 +20,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
-import play.api.libs.ws.{StandaloneWSClient, StandaloneWSRequest, StandaloneWSResponse}
+import play.api.libs.ws.StandaloneWSClient
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
@@ -56,18 +56,20 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
         Right(s"No slug created yet at $url")
     }
 
-    201 +: 400 +: 500 +: Nil foreach { status =>
-      s"return Left when got $status status from checking if slug exists" in new Setup {
-        (wsRequest.head _)
-          .expects()
-          .returning(Future.successful(wsResponse))
+    "return Left when got unexpected status from checking if slug exists" in {
+      allHttpStatusCodes filterNot Seq(200, 404).contains foreach { status =>
+        new Setup {
+          (wsRequest.head _)
+            .expects()
+            .returning(Future.successful(wsResponse))
 
-        (wsResponse.status _)
-          .expects()
-          .returning(status)
+          (wsResponse.status _)
+            .expects()
+            .returning(status)
 
-        slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion).value.futureValue shouldBe
-          Left(s"Cannot check if slug exists at $url. Returned status $status")
+          slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion).value.futureValue shouldBe
+            Left(s"Cannot check if slug exists at $url. Returned status $status")
+        }
       }
     }
 
@@ -83,26 +85,21 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
   }
 
   private trait Setup {
-    val webstoreUri        = "webstoreUri"
+    val webstoreUri = "webstoreUri"
     val slugBuilderVersion = "0.5.2"
-    val repositoryName     = repositoryNameGen.generateOne
-    val releaseVersion     = releaseVersionGen.generateOne
-    val wsClient           = mock[StandaloneWSClient]
+    val repositoryName = repositoryNameGen.generateOne
+    val releaseVersion = releaseVersionGen.generateOne
+    val wsClient = mock[StandaloneWSClient]
 
     val slugChecker = new SlugChecker(wsClient, webstoreUri, slugBuilderVersion)
 
-    val url        = s"$webstoreUri/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
-    val wsRequest  = mock[TestWSRequest]
+    val url = s"$webstoreUri/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+    val wsRequest = mock[TestWSRequest]
     val wsResponse = mock[wsRequest.Response]
 
     (wsClient
       .url(_: String))
       .expects(url)
       .returning(wsRequest)
-  }
-
-  private trait TestWSRequest extends StandaloneWSRequest {
-    override type Self     = TestWSRequest
-    override type Response = StandaloneWSResponse
   }
 }

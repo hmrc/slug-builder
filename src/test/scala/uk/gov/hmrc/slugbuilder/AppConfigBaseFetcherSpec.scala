@@ -28,7 +28,7 @@ import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.ws.StandaloneWSClient
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
-import uk.gov.hmrc.slugbuilder.generators.Generators.{releaseVersionGen, repositoryNameGen}
+import uk.gov.hmrc.slugbuilder.generators.Generators._
 
 import scala.concurrent.Future
 
@@ -97,18 +97,20 @@ class AppConfigBaseFetcherSpec extends WordSpec with MockFactory with ScalaFutur
         Left(s"app-config-base does not exist at: $url")
     }
 
-    201 +: 400 +: 500 +: Nil foreach { status =>
-      s"return Left when got $status status from fetching app-config-base" in new Setup {
-        (wsRequest.get _)
-          .expects()
-          .returning(Future.successful(wsResponse))
+    "return Left when got unexpected status from fetching app-config-base" in {
+      allHttpStatusCodes filterNot Seq(200, 404).contains foreach { status =>
+        new Setup {
+          (wsRequest.get _)
+            .expects()
+            .returning(Future.successful(wsResponse))
 
-        (wsResponse.status _)
-          .expects()
-          .returning(status)
+          (wsResponse.status _)
+            .expects()
+            .returning(status)
 
-        appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
-          Left(s"Cannot fetch app-config-base from $url. Returned status $status")
+          appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
+            Left(s"Cannot fetch app-config-base from $url. Returned status $status")
+        }
       }
     }
 

@@ -43,4 +43,8 @@ object Generators {
 
   val repositoryNameGen: Gen[RepositoryName] = nonEmptyStrings.map(RepositoryName.apply)
   val releaseVersionGen: Gen[ReleaseVersion] = releaseVersions.map(ReleaseVersion.apply)
+
+  val allHttpStatusCodes: Seq[Int] = (200 to 208) ++: (300 to 308) ++: (400 to 431) ++: (500 to 511)
+
+  def httpStatusCodes(excluding: Int*): Gen[Int] = Gen.oneOf(allHttpStatusCodes filterNot excluding.contains)
 }

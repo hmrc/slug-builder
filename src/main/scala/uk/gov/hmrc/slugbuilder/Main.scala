@@ -19,6 +19,7 @@ package uk.gov.hmrc.slugbuilder
 import cats.implicits._
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import org.rauschig.jarchivelib.{ArchiveFormat, ArchiverFactory, CompressionType}
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 
 import scala.concurrent.Await
@@ -27,21 +28,23 @@ import scala.language.postfixOps
 
 object Main {
 
-  private implicit val system: ActorSystem    = ActorSystem()
-  private implicit val mat: ActorMaterializer = ActorMaterializer()
-
-  private val progressReporter     = new ProgressReporter()
-  private val httpClient           = StandaloneAhcWSClient()
-
   private val webstoreUri        = EnvironmentVariables.webstoreUri.getOrExit
   private val slugBuilderVersion = EnvironmentVariables.slugBuilderVersion.getOrExit
   private val artifactoryUri     = EnvironmentVariables.artifactoryUri.getOrExit
+
+  private implicit val system: ActorSystem    = ActorSystem()
+  private implicit val mat: ActorMaterializer = ActorMaterializer()
+
+  private val progressReporter = new ProgressReporter()
+  private val httpClient       = StandaloneAhcWSClient()
+  private val tarArchiver      = ArchiverFactory.createArchiver(ArchiveFormat.TAR, CompressionType.GZIP)
 
   private val slugBuilder = new SlugBuilder(
     progressReporter,
     new SlugChecker(httpClient, webstoreUri, slugBuilderVersion),
     new ArtifactFetcher(httpClient, artifactoryUri),
-    new AppConfigBaseFetcher(httpClient, webstoreUri)
+    new AppConfigBaseFetcher(httpClient, webstoreUri),
+    new SlugFileAssembler(tarArchiver)
   )
 
   def main(args: Array[String]): Unit = {
