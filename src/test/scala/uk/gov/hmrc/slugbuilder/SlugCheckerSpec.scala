@@ -53,7 +53,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
         .returning(404)
 
       slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion).value.futureValue shouldBe
-        Right("Slug does not exist")
+        Right(s"No slug created yet at $url")
     }
 
     201 +: 400 +: 500 +: Nil foreach { status =>

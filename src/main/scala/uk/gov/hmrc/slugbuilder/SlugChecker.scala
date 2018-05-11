@@ -37,7 +37,7 @@ class SlugChecker(wSClient: StandaloneWSClient, webstoreUri: String, slugBuilder
       .map(_.status)
       .map {
         case 200    => Left(s"Slug already exists at: $url")
-        case 404    => Right("Slug does not exist")
+        case 404    => Right(s"No slug created yet at $url")
         case status => Left(s"Cannot check if slug exists at $url. Returned status $status")
       }
       .recover {
