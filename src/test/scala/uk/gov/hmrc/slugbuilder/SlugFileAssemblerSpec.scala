@@ -17,6 +17,8 @@
 package uk.gov.hmrc.slugbuilder
 
 import java.io.File
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.attribute.PosixFilePermission._
 import java.nio.file.{Path, Paths}
 
 import org.rauschig.jarchivelib.Archiver
@@ -35,10 +37,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
 
     "create a 'slug' directory, " +
       "extract the artifact into it, " +
-      "if the 'start-docker.sh' doesn't exist " +
-      "create the 'conf' directory under 'slug', " +
-      "move app-config-base into it and " +
-      "create a new 'start-docker.sh'" in new Setup {
+      "assure 'start-docker.sh' file exist in the 'slug' directory and " +
+      "everyone has execute privileges on it " in new Setup {
 
       createDir
         .expects(slugDirectory)
@@ -53,6 +53,12 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .ensureStartDockerExists(_: Path, _: RepositoryName))
         .expects(slugDirectory, repositoryName)
         .returning(Right(()))
+
+      setPermissions
+        .expects(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+        .returning(())
 
       assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Right(
         s"${artifactFile.toFile.getName} slug file assembled"
@@ -105,6 +111,33 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
       assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Left(errorMessage)
     }
 
+    "return error when start-docker.sh permissions cannot be changed" in new Setup {
+      createDir
+        .expects(slugDirectory)
+        .returning(())
+
+      (archiver
+        .extract(_: File, _: File))
+        .expects(artifactFile.toFile, slugDirectory.toFile)
+        .returning(())
+
+      (startDockerShCreator
+        .ensureStartDockerExists(_: Path, _: RepositoryName))
+        .expects(slugDirectory, repositoryName)
+        .returning(Right(()))
+
+      val exception = new Exception("exception message")
+      setPermissions
+        .expects(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+        .throwing(exception)
+
+      assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Left(
+        s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}"
+      )
+    }
+
     "not catch fatal Errors" in new Setup {
       val error = new OutOfMemoryError("error")
       createDir
@@ -120,11 +153,13 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
     val releaseVersion = releaseVersionGen.generateOne
     val artifactFile   = Paths.get(s"$repositoryName-$releaseVersion.tgz")
     val slugDirectory  = Paths.get("slug")
+    val startDockerFile  = slugDirectory resolve "start-docker.sh"
 
     val archiver             = mock[Archiver]
     val startDockerShCreator = mock[StartDockerScriptCreator]
     val createDir            = mockFunction[Path, Unit]
-    val assembler            = new SlugFileAssembler(archiver, startDockerShCreator, createDir)
+    val setPermissions       = mockFunction[Path, Set[PosixFilePermission], Unit]
+    val assembler            = new SlugFileAssembler(archiver, startDockerShCreator, createDir, setPermissions)
   }
 
   private implicit def pathToFile(path: Path): File = path.toFile

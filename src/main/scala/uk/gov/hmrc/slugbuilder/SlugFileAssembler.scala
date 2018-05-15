@@ -17,7 +17,9 @@
 package uk.gov.hmrc.slugbuilder
 
 import java.io.File
-import java.nio.file.{Path, Paths}
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.attribute.PosixFilePermission._
+import java.nio.file.{Files, Path, Paths}
 
 import cats.data.EitherT
 import cats.implicits._
@@ -27,17 +29,24 @@ import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.implicitConversions
+import scala.collection.JavaConversions._
 
 class SlugFileAssembler(
   archiver: Archiver,
   startDockerScriptCreator: StartDockerScriptCreator,
-  create: Path => Unit = path => path.toFile.mkdir()) {
+  create: Path => Unit = path => path.toFile.mkdir(),
+  setPermissions: (Path, Set[PosixFilePermission]) => Unit = (file, permissions) =>
+    Files.setPosixFilePermissions(file, permissions)) {
 
   import startDockerScriptCreator._
 
+  private val startDockerPermissions =
+    Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
+
   def assemble(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] = {
-    val artifact      = Paths.get(s"$repositoryName-$releaseVersion.tgz")
-    val slugDirectory = Paths.get("slug")
+    val artifact        = Paths.get(s"$repositoryName-$releaseVersion.tgz")
+    val slugDirectory   = Paths.get("slug")
+    val startDockerFile = slugDirectory resolve Paths.get("start-docker.sh")
 
     EitherT
       .fromEither[Future] {
@@ -47,6 +56,8 @@ class SlugFileAssembler(
           _ <- perform(archiver.extract(artifact, slugDirectory)) leftMap (exception =>
                 s"Couldn't decompress artifact from $artifact. Cause: ${exception.getMessage}")
           _ <- ensureStartDockerExists(slugDirectory, repositoryName)
+          _ <- perform(setPermissions(startDockerFile, startDockerPermissions)) leftMap (exception =>
+                s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
         } yield ()
       }
       .map(_ => s"$artifact slug file assembled")
