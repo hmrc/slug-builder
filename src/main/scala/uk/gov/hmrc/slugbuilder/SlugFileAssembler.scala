@@ -17,40 +17,40 @@
 package uk.gov.hmrc.slugbuilder
 
 import java.io.File
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 
 import cats.data.EitherT
 import cats.implicits._
 import org.rauschig.jarchivelib.Archiver
+import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.Try
+import scala.language.implicitConversions
 
-class SlugFileAssembler(archiver: Archiver, createDir: File => Unit = file => file.mkdir()) {
+class SlugFileAssembler(
+  archiver: Archiver,
+  startDockerScriptCreator: StartDockerScriptCreator,
+  create: Path => Unit = path => path.toFile.mkdir()) {
+
+  import startDockerScriptCreator._
 
   def assemble(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] = {
-    val artifact        = Paths.get(s"$repositoryName-$releaseVersion.tgz").toFile
-    val outputDirectory = Paths.get("slug").toFile
+    val artifact      = Paths.get(s"$repositoryName-$releaseVersion.tgz")
+    val slugDirectory = Paths.get("slug")
 
     EitherT
       .fromEither[Future] {
         for {
-          _ <- perform(createDir(outputDirectory)) leftMap (exception =>
-                s"Couldn't create slug directory at ${outputDirectory.getName}. Cause: ${exception.getMessage}")
-          _ <- perform(archiver.extract(artifact, outputDirectory)) leftMap (exception =>
-                s"Couldn't decompress artifact from ${artifact.getName}. Cause: ${exception.getMessage}")
+          _ <- perform(create(slugDirectory)) leftMap (exception =>
+                s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
+          _ <- perform(archiver.extract(artifact, slugDirectory)) leftMap (exception =>
+                s"Couldn't decompress artifact from $artifact. Cause: ${exception.getMessage}")
+          _ <- ensureStartDockerExists(slugDirectory, repositoryName)
         } yield ()
       }
-      .map(_ => s"${artifact.getName} slug file assembled")
+      .map(_ => s"$artifact slug file assembled")
   }
 
-  private def perform(operation: => Unit): Either[Exception, Unit] =
-    Either
-      .fromTry {
-        Try(operation)
-      }
-      .leftMap {
-        case exception: Exception => exception
-      }
+  private implicit def pathToFile(path: Path): File = path.toFile
 }
