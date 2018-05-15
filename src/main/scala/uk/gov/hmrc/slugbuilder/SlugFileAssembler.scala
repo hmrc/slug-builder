@@ -17,26 +17,31 @@
 package uk.gov.hmrc.slugbuilder
 
 import java.io.File
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermission._
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, OpenOption, Path, Paths}
 
 import cats.data.EitherT
 import cats.implicits._
 import org.rauschig.jarchivelib.Archiver
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
 
+import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.language.implicitConversions
-import scala.collection.JavaConversions._
 
 class SlugFileAssembler(
   archiver: Archiver,
   startDockerScriptCreator: StartDockerScriptCreator,
   create: Path => Unit = path => path.toFile.mkdir(),
   setPermissions: (Path, Set[PosixFilePermission]) => Unit = (file, permissions) =>
-    Files.setPosixFilePermissions(file, permissions)) {
+    Files.setPosixFilePermissions(file, permissions),
+  createFile: (Path, String, Charset, OpenOption) => Unit = (file, content, charset, openOption) =>
+    Files.write(file, Seq(content), charset, openOption)) {
 
   import startDockerScriptCreator._
 
@@ -47,6 +52,7 @@ class SlugFileAssembler(
     val artifact        = Paths.get(s"$repositoryName-$releaseVersion.tgz")
     val slugDirectory   = Paths.get("slug")
     val startDockerFile = slugDirectory resolve Paths.get("start-docker.sh")
+    val procFile        = slugDirectory resolve Paths.get("Procfile")
 
     EitherT
       .fromEither[Future] {
@@ -58,6 +64,8 @@ class SlugFileAssembler(
           _ <- ensureStartDockerExists(slugDirectory, repositoryName)
           _ <- perform(setPermissions(startDockerFile, startDockerPermissions)) leftMap (exception =>
                 s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
+          _ <- perform(createFile(procFile, s"web: ./${startDockerFile.toFile.getName}", UTF_8, CREATE_NEW)) leftMap (exception =>
+                s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
         } yield ()
       }
       .map(_ => s"$artifact slug file assembled")

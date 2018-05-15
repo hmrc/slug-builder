@@ -17,9 +17,12 @@
 package uk.gov.hmrc.slugbuilder
 
 import java.io.File
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermission._
-import java.nio.file.{Path, Paths}
+import java.nio.file.{OpenOption, Path, Paths}
 
 import org.rauschig.jarchivelib.Archiver
 import org.scalamock.scalatest.MockFactory
@@ -38,7 +41,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
     "create a 'slug' directory, " +
       "extract the artifact into it, " +
       "assure 'start-docker.sh' file exist in the 'slug' directory and " +
-      "everyone has execute privileges on it " in new Setup {
+      "it has 755 permissions and " +
+      "a 'Procfile' is created in the 'slug' directory" in new Setup {
 
       createDir
         .expects(slugDirectory)
@@ -58,6 +62,10 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .expects(
           startDockerFile,
           Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+        .returning(())
+
+      createFile
+        .expects(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
         .returning(())
 
       assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Right(
@@ -138,6 +146,37 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
       )
     }
 
+    "return error if creating the Procfile fails" in new Setup {
+      createDir
+        .expects(slugDirectory)
+        .returning(())
+
+      (archiver
+        .extract(_: File, _: File))
+        .expects(artifactFile.toFile, slugDirectory.toFile)
+        .returning(())
+
+      (startDockerShCreator
+        .ensureStartDockerExists(_: Path, _: RepositoryName))
+        .expects(slugDirectory, repositoryName)
+        .returning(Right(()))
+
+      setPermissions
+        .expects(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+        .returning(())
+
+      val exception = new Exception("exception message")
+      createFile
+        .expects(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
+        .throwing(exception)
+
+      assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Left(
+        s"Couldn't create the $procFile. Cause: ${exception.getMessage}"
+      )
+    }
+
     "not catch fatal Errors" in new Setup {
       val error = new OutOfMemoryError("error")
       createDir
@@ -149,17 +188,19 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
   }
 
   private trait Setup {
-    val repositoryName = repositoryNameGen.generateOne
-    val releaseVersion = releaseVersionGen.generateOne
-    val artifactFile   = Paths.get(s"$repositoryName-$releaseVersion.tgz")
-    val slugDirectory  = Paths.get("slug")
-    val startDockerFile  = slugDirectory resolve "start-docker.sh"
+    val repositoryName  = repositoryNameGen.generateOne
+    val releaseVersion  = releaseVersionGen.generateOne
+    val artifactFile    = Paths.get(s"$repositoryName-$releaseVersion.tgz")
+    val slugDirectory   = Paths.get("slug")
+    val startDockerFile = slugDirectory resolve "start-docker.sh"
+    val procFile        = slugDirectory resolve "Procfile"
 
     val archiver             = mock[Archiver]
     val startDockerShCreator = mock[StartDockerScriptCreator]
     val createDir            = mockFunction[Path, Unit]
     val setPermissions       = mockFunction[Path, Set[PosixFilePermission], Unit]
-    val assembler            = new SlugFileAssembler(archiver, startDockerShCreator, createDir, setPermissions)
+    val createFile           = mockFunction[Path, String, Charset, OpenOption, Unit]
+    val assembler            = new SlugFileAssembler(archiver, startDockerShCreator, createDir, setPermissions, createFile)
   }
 
   private implicit def pathToFile(path: Path): File = path.toFile
