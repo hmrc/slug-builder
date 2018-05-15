@@ -51,10 +51,10 @@ class StartDockerScriptCreator(
           for {
             _ <- perform(create(confDirectory)) leftMap (exception =>
                   s"Couldn't create conf directory at $confDirectory. Cause: ${exception.getMessage}")
-            _ <- perform(move(appConfigBase, confDirectory)) leftMap (exception =>
-                  s"Couldn't move $appConfigBase to $confDirectory. Cause: ${exception.getMessage}")
+            _ <- perform(move(appConfigBase, confDirectory resolve appConfigBase)) leftMap (exception =>
+                  s"Couldn't move $appConfigBase to $confDirectory. Cause: $exception")
             _ <- perform(createFile(startDockerFileInSlug, startDockerContent, UTF_8, CREATE_NEW)) leftMap (exception =>
-                  s"Couldn't create $startDockerFileInSlug. Cause: ${exception.getMessage}")
+                  s"Couldn't create $startDockerFileInSlug. Cause: $exception")
           } yield ()
       }
   }

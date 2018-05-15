@@ -56,7 +56,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .returning(())
 
       move
-        .expects(appConfigBase, confDirectory)
+        .expects(appConfigBase, confDirectory resolve appConfigBase)
         .returning(())
 
       val startDockerContent = Seq(
@@ -111,11 +111,11 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
 
       val exception = new Exception("exception message")
       move
-        .expects(appConfigBase, confDirectory)
+        .expects(appConfigBase, confDirectory resolve appConfigBase)
         .throwing(exception)
 
       startDockerShCreator.ensureStartDockerExists(slugDirectory, repositoryName) shouldBe Left(
-        s"Couldn't move $appConfigBase to $confDirectory. Cause: ${exception.getMessage}"
+        s"Couldn't move $appConfigBase to $confDirectory. Cause: $exception"
       )
     }
 
@@ -130,7 +130,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .returning(())
 
       move
-        .expects(appConfigBase, confDirectory)
+        .expects(appConfigBase, confDirectory resolve appConfigBase)
         .returning(())
 
       val exception = new Exception("exception message")
@@ -139,7 +139,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .throwing(exception)
 
       startDockerShCreator.ensureStartDockerExists(slugDirectory, repositoryName) shouldBe Left(
-        s"Couldn't create $startDockerSh. Cause: ${exception.getMessage}"
+        s"Couldn't create $startDockerSh. Cause: $exception"
       )
     }
   }
