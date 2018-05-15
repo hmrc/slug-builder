@@ -88,7 +88,7 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
   private trait Setup {
     val repositoryName = repositoryNameGen.generateOne
     val releaseVersion = releaseVersionGen.generateOne
-    val artifactFile   = Paths.get(s"$repositoryName-$releaseVersion.zip").toFile
+    val artifactFile   = Paths.get(s"$repositoryName-$releaseVersion.tgz").toFile
     val slugDirectory  = Paths.get("slug").toFile
 
     val archiver = mock[Archiver]
