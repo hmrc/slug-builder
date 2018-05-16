@@ -1,42 +1,65 @@
+/*
+ * Copyright 2018 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.slugbuilder.tools
 
-import java.io.{File, FileInputStream, FileOutputStream}
+import java.io.{FileInputStream, FileOutputStream}
+import java.nio.file.Files._
+import java.nio.file.{Path, Paths}
+import java.util.stream.{Stream => JavaStream}
 
 import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveInputStream, TarArchiveOutputStream}
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.utils.IOUtils
 
+import scala.collection.JavaConversions._
+
 class TarArchiver {
 
-  def decompress(name: String, out: File): Unit = {
-    val inputStream = archiveInputStream(name)
+  def decompress(tgzFile: Path, outputDirectory: Path): Unit = {
+    val inputStream = archiveInputStream(tgzFile)
     try {
-      Stream.continually(inputStream.getNextTarEntry).takeWhile(_ != null).map( entry =>
-        if (!entry.isDirectory) {
-          val currentFile = new File(out, entry.getName)
-          val parent = currentFile.getParentFile
-          if (!parent.exists) parent.mkdirs
-          IOUtils.copy(inputStream, new FileOutputStream(currentFile))
-        }
-      ).force
+      Stream
+        .continually(inputStream.getNextTarEntry)
+        .takeWhile(_ != null)
+        .map(entry =>
+          if (!entry.isDirectory) {
+            val currentFile = outputDirectory resolve entry.getName
+            if (!exists(currentFile.getParent)) createDirectory(currentFile.getParent)
+            IOUtils.copy(inputStream, new FileOutputStream(currentFile.toFile))
+        })
+        .force
     } finally inputStream.close()
   }
 
-  private def archiveInputStream(name: String) =
-    Option(new TarArchiveInputStream(new GzipCompressorInputStream(new FileInputStream(name))))
+  private def archiveInputStream(tgzFile: Path) =
+    Option(new TarArchiveInputStream(new GzipCompressorInputStream(new FileInputStream(tgzFile.toFile))))
       .getOrElse {
         throw new RuntimeException("Tar archive reader cannot be created")
       }
 
-  def compressToTar(destination: String, files: Seq[File]): Unit = {
+  def compressToTar(destination: Path, files: JavaStream[Path]): Unit = {
     val outputStream = archiveOutputStream(destination)
     try {
-      files foreach (file => addToArchive(outputStream, file, "."))
+      files.iterator() foreach (file => addToArchive(outputStream, file, Paths.get("")))
     } finally outputStream.close()
   }
 
-  private def archiveOutputStream(name: String) =
-    Option(new TarArchiveOutputStream(new FileOutputStream(name)))
+  private def archiveOutputStream(destination: Path) =
+    Option(new TarArchiveOutputStream(new FileOutputStream(destination.toFile)))
       .map { tarOutputStream =>
         // TAR has an 8 gig file limit by default, this gets around that
         tarOutputStream.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR)
@@ -50,21 +73,20 @@ class TarArchiver {
         throw new RuntimeException("Tar archive writer cannot be created")
       }
 
-  private def addToArchive(outputStream: TarArchiveOutputStream, file: File, dir: String): Unit = {
-    val entry = dir + File.separator + file.getName
-    if (file.isFile) {
-      outputStream.putArchiveEntry(new TarArchiveEntry(file, entry))
-      try {
-        val in = new FileInputStream(file)
-        try IOUtils.copy(in, outputStream)
-        finally if (in != null) in.close()
-      }
-      outputStream.closeArchiveEntry()
-    } else if (file.isDirectory) {
-      val children = file.listFiles
-      if (children != null) for (child <- children) {
+  private def addToArchive(outputStream: TarArchiveOutputStream, file: Path, dir: Path): Unit = {
+    val entry = dir resolve file.toFile.getName
+    if (isDirectory(file)) {
+      val children = list(file).iterator()
+      for (child <- children) {
         addToArchive(outputStream, child, entry)
       }
-    } else throw new RuntimeException(s"${file.getName} is not supported for adding to a TAR")
+    } else {
+      outputStream.putArchiveEntry(new TarArchiveEntry(file.toFile, entry.toString))
+      try {
+        val in = new FileInputStream(file.toFile)
+        try IOUtils.copy(in, outputStream)
+        finally if (in != null) in.close()
+      } finally outputStream.closeArchiveEntry()
+    }
   }
 }

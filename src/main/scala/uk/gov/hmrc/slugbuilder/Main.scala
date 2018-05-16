@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.implicits._
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import org.rauschig.jarchivelib.{ArchiveFormat, ArchiverFactory, CompressionType}
+import cats.implicits._
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
+import uk.gov.hmrc.slugbuilder.tools.TarArchiver
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -37,7 +37,7 @@ object Main {
 
   private val progressReporter = new ProgressReporter()
   private val httpClient       = StandaloneAhcWSClient()
-  private val tarArchiver      = ArchiverFactory.createArchiver(ArchiveFormat.TAR, CompressionType.GZIP)
+  private val tarArchiver      = new TarArchiver()
 
   private val slugBuilder = new SlugBuilder(
     progressReporter,

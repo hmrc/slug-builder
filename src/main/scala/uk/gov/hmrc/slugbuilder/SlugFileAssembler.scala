@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.io.File
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.StandardOpenOption.CREATE_NEW
@@ -26,8 +25,8 @@ import java.nio.file.{Files, OpenOption, Path, Paths}
 
 import cats.data.EitherT
 import cats.implicits._
-import org.rauschig.jarchivelib.Archiver
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
+import uk.gov.hmrc.slugbuilder.tools.TarArchiver
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,7 +34,7 @@ import scala.concurrent.Future
 import scala.language.implicitConversions
 
 class SlugFileAssembler(
-  archiver: Archiver,
+  archiver: TarArchiver,
   startDockerScriptCreator: StartDockerScriptCreator,
   create: Path => Unit = path => path.toFile.mkdir(),
   setPermissions: (Path, Set[PosixFilePermission]) => Unit = (file, permissions) =>
@@ -59,7 +58,7 @@ class SlugFileAssembler(
         for {
           _ <- perform(create(slugDirectory)) leftMap (exception =>
                 s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
-          _ <- perform(archiver.extract(artifact, slugDirectory)) leftMap (exception =>
+          _ <- perform(archiver.decompress(artifact, slugDirectory)) leftMap (exception =>
                 s"Couldn't decompress artifact from $artifact. Cause: ${exception.getMessage}")
           _ <- ensureStartDockerExists(slugDirectory, repositoryName)
           _ <- perform(setPermissions(startDockerFile, startDockerPermissions)) leftMap (exception =>
@@ -70,6 +69,4 @@ class SlugFileAssembler(
       }
       .map(_ => s"$artifact slug file assembled")
   }
-
-  private implicit def pathToFile(path: Path): File = path.toFile
 }

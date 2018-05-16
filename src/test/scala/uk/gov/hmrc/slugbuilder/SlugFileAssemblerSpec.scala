@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.io.File
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.StandardOpenOption.CREATE_NEW
@@ -24,13 +23,13 @@ import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermission._
 import java.nio.file.{OpenOption, Path, Paths}
 
-import org.rauschig.jarchivelib.Archiver
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.{releaseVersionGen, repositoryNameGen}
+import uk.gov.hmrc.slugbuilder.tools.TarArchiver
 
 import scala.language.implicitConversions
 
@@ -49,8 +48,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .returning(())
 
       (archiver
-        .extract(_: File, _: File))
-        .expects(artifactFile.toFile, slugDirectory.toFile)
+        .decompress(_: Path, _: Path))
+        .expects(artifactFile, slugDirectory)
         .returning(())
 
       (startDockerShCreator
@@ -91,8 +90,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
 
       val exception = new Exception("exception message")
       (archiver
-        .extract(_: File, _: File))
-        .expects(artifactFile.toFile, slugDirectory.toFile)
+        .decompress(_: Path, _: Path))
+        .expects(artifactFile, slugDirectory)
         .throwing(exception)
 
       assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Left(
@@ -106,8 +105,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .returning(())
 
       (archiver
-        .extract(_: File, _: File))
-        .expects(artifactFile.toFile, slugDirectory.toFile)
+        .decompress(_: Path, _: Path))
+        .expects(artifactFile, slugDirectory)
         .returning(())
 
       val errorMessage = "error message"
@@ -125,8 +124,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .returning(())
 
       (archiver
-        .extract(_: File, _: File))
-        .expects(artifactFile.toFile, slugDirectory.toFile)
+        .decompress(_: Path, _: Path))
+        .expects(artifactFile, slugDirectory)
         .returning(())
 
       (startDockerShCreator
@@ -152,8 +151,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .returning(())
 
       (archiver
-        .extract(_: File, _: File))
-        .expects(artifactFile.toFile, slugDirectory.toFile)
+        .decompress(_: Path, _: Path))
+        .expects(artifactFile, slugDirectory)
         .returning(())
 
       (startDockerShCreator
@@ -188,20 +187,18 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
   }
 
   private trait Setup {
-    val repositoryName  = repositoryNameGen.generateOne
-    val releaseVersion  = releaseVersionGen.generateOne
-    val artifactFile    = Paths.get(s"$repositoryName-$releaseVersion.tgz")
-    val slugDirectory   = Paths.get("slug")
+    val repositoryName = repositoryNameGen.generateOne
+    val releaseVersion = releaseVersionGen.generateOne
+    val artifactFile = Paths.get(s"$repositoryName-$releaseVersion.tgz")
+    val slugDirectory = Paths.get("slug")
     val startDockerFile = slugDirectory resolve "start-docker.sh"
-    val procFile        = slugDirectory resolve "Procfile"
+    val procFile = slugDirectory resolve "Procfile"
 
-    val archiver             = mock[Archiver]
+    val archiver = mock[TarArchiver]
     val startDockerShCreator = mock[StartDockerScriptCreator]
-    val createDir            = mockFunction[Path, Unit]
-    val setPermissions       = mockFunction[Path, Set[PosixFilePermission], Unit]
-    val createFile           = mockFunction[Path, String, Charset, OpenOption, Unit]
-    val assembler            = new SlugFileAssembler(archiver, startDockerShCreator, createDir, setPermissions, createFile)
+    val createDir = mockFunction[Path, Unit]
+    val setPermissions = mockFunction[Path, Set[PosixFilePermission], Unit]
+    val createFile = mockFunction[Path, String, Charset, OpenOption, Unit]
+    val assembler = new SlugFileAssembler(archiver, startDockerShCreator, createDir, setPermissions, createFile)
   }
-
-  private implicit def pathToFile(path: Path): File = path.toFile
 }
