@@ -72,6 +72,6 @@ class SlugFileAssembler(
                 s"Couldn't create the $slugTarFile. Cause: $exception")
         } yield ()
       }
-      .map(_ => s"$artifact slug file assembled")
+      .map(_ => s"$slugTarFile slug file assembled")
   }
 }

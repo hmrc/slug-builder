@@ -30,10 +30,11 @@ val compile = Seq(
 )
 
 val test = Seq(
-  "org.pegdown"    % "pegdown"     % "1.4.2"  % Test,
-  "org.scalacheck" %% "scalacheck" % "1.14.0" % Test,
-  "org.scalamock"  %% "scalamock"  % "4.1.0"  % Test,
-  "org.scalatest"  %% "scalatest"  % "3.0.5"  % Test
+  "org.mockito"    % "mockito-core" % "2.18.3" % Test,
+  "org.pegdown"    % "pegdown"      % "1.4.2"  % Test,
+  "org.scalacheck" %% "scalacheck"  % "1.14.0" % Test,
+  "org.scalamock"  %% "scalamock"   % "4.1.0"  % Test,
+  "org.scalatest"  %% "scalatest"   % "3.0.5"  % Test
 )
 
 val assemblySettings = Seq(

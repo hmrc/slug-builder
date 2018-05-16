@@ -19,6 +19,7 @@ package uk.gov.hmrc.slugbuilder
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.implicits._
+import org.eclipse.jgit.api.Git
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import uk.gov.hmrc.slugbuilder.tools.TarArchiver
 
@@ -31,6 +32,8 @@ object Main {
   private lazy val webstoreUri        = EnvironmentVariables.webstoreUri.getOrExit
   private lazy val slugBuilderVersion = EnvironmentVariables.slugBuilderVersion.getOrExit
   private lazy val artifactoryUri     = EnvironmentVariables.artifactoryUri.getOrExit
+  private lazy val gitHubApiUser      = EnvironmentVariables.gitHubApiUser.getOrExit
+  private lazy val gitHubApiToken     = EnvironmentVariables.gitHubApiToken.getOrExit
 
   private lazy implicit val system: ActorSystem    = ActorSystem()
   private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -45,7 +48,7 @@ object Main {
     new ArtifactFetcher(httpClient, artifactoryUri),
     new AppConfigBaseFetcher(httpClient, webstoreUri),
     new SlugFileAssembler(tarArchiver, new StartDockerScriptCreator()),
-    new DockerImage()
+    new DockerImage(Git.cloneRepository(), gitHubApiUser, gitHubApiToken, slugBuilderVersion)
   )
 
   def main(args: Array[String]): Unit = {

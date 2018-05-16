@@ -79,7 +79,7 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .returning(())
 
       assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Right(
-        s"${artifactFile.toFile.getName} slug file assembled"
+        s"$slugTarFile slug file assembled"
       )
     }
 
