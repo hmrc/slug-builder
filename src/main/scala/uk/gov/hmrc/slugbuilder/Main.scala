@@ -44,7 +44,8 @@ object Main {
     new SlugChecker(httpClient, webstoreUri, slugBuilderVersion),
     new ArtifactFetcher(httpClient, artifactoryUri),
     new AppConfigBaseFetcher(httpClient, webstoreUri),
-    new SlugFileAssembler(tarArchiver, new StartDockerScriptCreator())
+    new SlugFileAssembler(tarArchiver, new StartDockerScriptCreator()),
+    new DockerImage()
   )
 
   def main(args: Array[String]): Unit = {
