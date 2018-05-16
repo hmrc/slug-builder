@@ -28,18 +28,18 @@ import scala.language.postfixOps
 
 object Main {
 
-  private val webstoreUri        = EnvironmentVariables.webstoreUri.getOrExit
-  private val slugBuilderVersion = EnvironmentVariables.slugBuilderVersion.getOrExit
-  private val artifactoryUri     = EnvironmentVariables.artifactoryUri.getOrExit
+  private lazy val webstoreUri        = EnvironmentVariables.webstoreUri.getOrExit
+  private lazy val slugBuilderVersion = EnvironmentVariables.slugBuilderVersion.getOrExit
+  private lazy val artifactoryUri     = EnvironmentVariables.artifactoryUri.getOrExit
 
-  private implicit val system: ActorSystem    = ActorSystem()
-  private implicit val mat: ActorMaterializer = ActorMaterializer()
+  private lazy implicit val system: ActorSystem    = ActorSystem()
+  private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  private val progressReporter = new ProgressReporter()
-  private val httpClient       = StandaloneAhcWSClient()
-  private val tarArchiver      = new TarArchiver()
+  private lazy val progressReporter = new ProgressReporter()
+  private lazy val httpClient       = StandaloneAhcWSClient()
+  private lazy val tarArchiver      = new TarArchiver()
 
-  private val slugBuilder = new SlugBuilder(
+  private lazy val slugBuilder = new SlugBuilder(
     progressReporter,
     new SlugChecker(httpClient, webstoreUri, slugBuilderVersion),
     new ArtifactFetcher(httpClient, artifactoryUri),

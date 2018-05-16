@@ -59,7 +59,7 @@ class SlugFileAssembler(
           _ <- perform(create(slugDirectory)) leftMap (exception =>
                 s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
           _ <- perform(archiver.decompress(artifact, slugDirectory)) leftMap (exception =>
-                s"Couldn't decompress artifact from $artifact. Cause: ${exception.getMessage}")
+                s"Couldn't decompress artifact from $artifact. Cause: $exception")
           _ <- ensureStartDockerExists(slugDirectory, repositoryName)
           _ <- perform(setPermissions(startDockerFile, startDockerPermissions)) leftMap (exception =>
                 s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")

@@ -95,7 +95,7 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .throwing(exception)
 
       assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Left(
-        s"Couldn't decompress artifact from ${artifactFile.toFile.getName}. Cause: ${exception.getMessage}"
+        s"Couldn't decompress artifact from ${artifactFile.toFile.getName}. Cause: $exception"
       )
     }
 

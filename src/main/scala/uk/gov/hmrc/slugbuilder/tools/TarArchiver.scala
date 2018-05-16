@@ -37,8 +37,8 @@ class TarArchiver {
         .takeWhile(_ != null)
         .map(entry =>
           if (!entry.isDirectory) {
-            val currentFile = outputDirectory resolve entry.getName
-            if (!exists(currentFile.getParent)) createDirectory(currentFile.getParent)
+            val currentFile = outputDirectory resolve Paths.get(entry.getName).normalize()
+            if (!exists(currentFile.getParent)) currentFile.getParent.toFile.mkdirs()
             IOUtils.copy(inputStream, new FileOutputStream(currentFile.toFile))
         })
         .force
