@@ -31,7 +31,7 @@ class TarArchiverSpec extends WordSpec {
 
     "allow to compress to tar and decompress from tgz" in new Setup {
       val tar = Paths.get("compressed.tar")
-      archiver.compressToTar(tar, Files.list(folder))
+      archiver.tar(tar, Files.list(folder))
 
       val tgz = Paths.get("compressed.tgz")
       compress(inputFile = tar, outputFile = tgz)

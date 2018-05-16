@@ -22,6 +22,7 @@ import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermission._
 import java.nio.file.{Files, OpenOption, Path, Paths}
+import java.util.stream.{Stream => JavaStream}
 
 import cats.data.EitherT
 import cats.implicits._
@@ -40,7 +41,8 @@ class SlugFileAssembler(
   setPermissions: (Path, Set[PosixFilePermission]) => Unit = (file, permissions) =>
     Files.setPosixFilePermissions(file, permissions),
   createFile: (Path, String, Charset, OpenOption) => Unit = (file, content, charset, openOption) =>
-    Files.write(file, Seq(content), charset, openOption)) {
+    Files.write(file, Seq(content), charset, openOption),
+  listFiles: Path => JavaStream[Path] = path => Files.list(path)) {
 
   import startDockerScriptCreator._
 
@@ -52,6 +54,7 @@ class SlugFileAssembler(
     val slugDirectory   = Paths.get("slug")
     val startDockerFile = slugDirectory resolve Paths.get("start-docker.sh")
     val procFile        = slugDirectory resolve Paths.get("Procfile")
+    val slugTarFile     = Paths.get(s"$repositoryName-$releaseVersion.tar")
 
     EitherT
       .fromEither[Future] {
@@ -63,8 +66,10 @@ class SlugFileAssembler(
           _ <- ensureStartDockerExists(slugDirectory, repositoryName)
           _ <- perform(setPermissions(startDockerFile, startDockerPermissions)) leftMap (exception =>
                 s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
-          _ <- perform(createFile(procFile, s"web: ./${startDockerFile.toFile.getName}", UTF_8, CREATE_NEW)) leftMap (exception =>
-                s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
+          _ <- perform(createFile(procFile, s"web: ./${startDockerFile.toFile.getName}", UTF_8, CREATE_NEW)) leftMap (
+                exception => s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
+          _ <- perform(archiver.tar(slugTarFile, listFiles(slugDirectory))) leftMap (exception =>
+                s"Couldn't create the $slugTarFile. Cause: $exception")
         } yield ()
       }
       .map(_ => s"$artifact slug file assembled")

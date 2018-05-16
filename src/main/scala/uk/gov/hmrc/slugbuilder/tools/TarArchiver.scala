@@ -51,7 +51,7 @@ class TarArchiver {
         throw new RuntimeException("Tar archive reader cannot be created")
       }
 
-  def compressToTar(destination: Path, files: JavaStream[Path]): Unit = {
+  def tar(destination: Path, files: JavaStream[Path]): Unit = {
     val outputStream = archiveOutputStream(destination)
     try {
       files.iterator() foreach (file => addToArchive(outputStream, file, Paths.get("")))
