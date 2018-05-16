@@ -23,9 +23,10 @@ lazy val slugBuilder = Project(appName, file("."))
   )
 
 val compile = Seq(
-  "com.typesafe.play" %% "play-ahc-ws-standalone" % "1.1.2",
+  "com.typesafe.play"  %% "play-ahc-ws-standalone" % "1.1.2",
+  "org.apache.commons" % "commons-compress"        % "1.16.1",
   "org.rauschig"      % "jarchivelib"             % "0.7.1",
-  "org.typelevel"     %% "cats-core"              % "1.0.1"
+  "org.typelevel"      %% "cats-core"              % "1.0.1"
 )
 
 val test = Seq(
