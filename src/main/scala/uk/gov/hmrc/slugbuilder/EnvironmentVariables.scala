@@ -22,9 +22,11 @@ object EnvironmentVariables {
 
   val webstoreUri: Either[String, String]        = findVariable("WEBSTORE_URI")
   val artifactoryUri: Either[String, String]     = findVariable("ARTIFACTORY_URI")
+  val workspace: Either[String, String]          = findVariable("WORKSPACE")
   val slugBuilderVersion: Either[String, String] = findVariable("SLUG_BUILDER_VERSION")
   val gitHubApiUser: Either[String, String]      = findVariable("GITHUB_API_USER")
   val gitHubApiToken: Either[String, String]     = findVariable("GITHUB_API_TOKEN")
+  val javaVersion: Either[String, String]        = findVariable("JAVA_VERSION")
 
   private def findVariable(name: String): Either[String, String] = Either.fromOption(
     sys.env.get(name),

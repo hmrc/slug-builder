@@ -23,15 +23,16 @@ lazy val slugBuilder = Project(appName, file("."))
   )
 
 val compile = Seq(
-  "com.typesafe.play"  %% "play-ahc-ws-standalone" % "1.1.2",
-  "org.apache.commons" % "commons-compress"        % "1.16.1",
-  "org.eclipse.jgit"   % "org.eclipse.jgit"        % "4.11.0.201803080745-r",
-  "org.typelevel"      %% "cats-core"              % "1.0.1"
+  "com.github.docker-java" % "docker-java"             % "3.0.14",
+  "com.typesafe.play"      %% "play-ahc-ws-standalone" % "1.1.2",
+  "org.apache.commons"     % "commons-compress"        % "1.16.1",
+  "org.eclipse.jgit"       % "org.eclipse.jgit"        % "4.11.0.201803080745-r",
+  "org.typelevel"          %% "cats-core"              % "1.0.1"
 )
 
 val test = Seq(
   "org.mockito"    % "mockito-core" % "2.18.3" % Test,
-  "org.pegdown"    % "pegdown"      % "1.4.2"  % Test,
+  "org.pegdown"    % "pegdown"      % "1.6.0"  % Test,
   "org.scalacheck" %% "scalacheck"  % "1.14.0" % Test,
   "org.scalamock"  %% "scalamock"   % "4.1.0"  % Test,
   "org.scalatest"  %% "scalatest"   % "3.0.5"  % Test

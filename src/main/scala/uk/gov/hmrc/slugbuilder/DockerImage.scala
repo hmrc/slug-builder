@@ -16,34 +16,15 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.file.Paths
-
-import cats.data.EitherT
 import cats.implicits._
-import org.eclipse.jgit.api.CloneCommand
-import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import cats.data.EitherT
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class DockerImage(cloneCommand: CloneCommand, githubApiUser: String, githubApiToken: String, slugBuilderVersion: String) {
-
+class DockerImage(buildPackCloner: BuildPackCloner, dockerImageRunner: DockerImageRunner) {
   def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] =
-    EitherT
-      .fromEither[Future] {
-        for {
-          _ <- cloneBuildPack
-        } yield ()
-      }
-      .map(_ => s"Docker image ${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz created")
-
-  private def cloneBuildPack = {
-    val repoUrl = "github.com/hmrc/buildpack-java-jar.git"
-    perform(
-      cloneCommand
-        .setURI(s"https://$githubApiUser:$githubApiToken@$repoUrl")
-        .setDirectory(Paths.get("bp").toFile)
-        .call()
-    ) leftMap (exception => s"Couldn't clone $repoUrl. Cause: ${exception.getMessage}")
-  }
+    for {
+      _                   <- buildPackCloner.cloneRepo
+      imageCreationResult <- dockerImageRunner.run(repositoryName, releaseVersion)
+    } yield imageCreationResult
 }

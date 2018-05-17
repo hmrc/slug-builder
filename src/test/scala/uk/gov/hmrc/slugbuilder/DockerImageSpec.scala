@@ -16,65 +16,64 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.file.Paths
-
-import org.eclipse.jgit.api.{CloneCommand, Git}
-import org.mockito.Mockito._
-import org.scalatest.Matchers._
-import org.scalatest.WordSpec
+import cats.data.EitherT._
+import cats.implicits._
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
+import org.scalatest.{Matchers, WordSpec}
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
-import uk.gov.hmrc.slugbuilder.generators.Generators._
+import uk.gov.hmrc.slugbuilder.generators.Generators.{releaseVersionGen, repositoryNameGen}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
-class DockerImageSpec extends WordSpec with ScalaFutures with MockitoSugar {
-
+class DockerImageSpec extends WordSpec with Matchers with MockFactory with ScalaFutures {
   "create" should {
+    "return right if cloning the java buildpack and running the docker image are successful" in new Setup {
+      (buildPackCloner.cloneRepo _)
+        .expects()
+        .returning(rightT[Future, String]("Buildpack cloned"))
 
-    "clone 'buildpack-java-jar' repo" in new Setup {
+      (dockerImageRunner
+        .run(_: RepositoryName, _: ReleaseVersion))
+        .expects(repositoryName, releaseVersion)
+        .returning(rightT[Future, String]("Docker image ran successfully"))
 
-      when(gitCloneCommand.setURI(repositoryUrl))
-        .thenReturn(gitCloneCommand)
-
-      when(gitCloneCommand.setDirectory(Paths.get("bp").toFile))
-        .thenReturn(gitCloneCommand)
-
-      val git = mock[Git]
-      when(gitCloneCommand.call())
-        .thenReturn(git)
-
-      dockerImage.create(repositoryName, releaseVersion).value.futureValue shouldBe Right(
-        s"Docker image ${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz created")
+      dockerImage.create(repositoryName, releaseVersion).value.futureValue shouldBe
+        Right("Docker image ran successfully")
     }
 
-    "return an error if cloning 'buildpack-java-jar' repo from GitHub fails" in new Setup {
+    "return left if cloning fails" in new Setup {
+      (buildPackCloner.cloneRepo _)
+        .expects()
+        .returning(leftT[Future, String]("Cloning buildpack failed"))
 
-      when(gitCloneCommand.setURI(repositoryUrl))
-        .thenReturn(gitCloneCommand)
+      dockerImage.create(repositoryName, releaseVersion).value.futureValue shouldBe
+        Left("Cloning buildpack failed")
+    }
 
-      when(gitCloneCommand.setDirectory(Paths.get("bp").toFile))
-        .thenReturn(gitCloneCommand)
+    "return left if running the docker image fails" in new Setup {
+      (buildPackCloner.cloneRepo _)
+        .expects()
+        .returning(rightT[Future, String]("Buildpack cloned"))
 
-      val exception = new RuntimeException("error")
-      when(gitCloneCommand.call())
-        .thenThrow(exception)
+      (dockerImageRunner
+        .run(_: RepositoryName, _: ReleaseVersion))
+        .expects(repositoryName, releaseVersion)
+        .returning(leftT[Future, String]("Running docker image failed"))
 
-      dockerImage.create(repositoryName, releaseVersion).value.futureValue shouldBe Left(
-        s"Couldn't clone github.com/hmrc/buildpack-java-jar.git. Cause: ${exception.getMessage}"
-      )
+      dockerImage.create(repositoryName, releaseVersion).value.futureValue shouldBe
+        Left("Running docker image failed")
     }
   }
 
-  private trait Setup {
-    val repositoryName     = repositoryNameGen.generateOne
-    val releaseVersion     = releaseVersionGen.generateOne
-    val githubApiUser      = nonEmptyStrings.generateOne
-    val githubApiToken     = nonEmptyStrings.generateOne
-    val slugBuilderVersion = nonEmptyStrings.generateOne
-    var repositoryUrl      = s"https://$githubApiUser:$githubApiToken@github.com/hmrc/buildpack-java-jar.git"
+  trait Setup {
+    val buildPackCloner   = mock[BuildPackCloner]
+    val dockerImageRunner = mock[DockerImageRunner]
 
-    val gitCloneCommand = mock[CloneCommand]
+    val repositoryName = repositoryNameGen.generateOne
+    val releaseVersion = releaseVersionGen.generateOne
 
-    val dockerImage = new DockerImage(gitCloneCommand, githubApiUser, githubApiToken, slugBuilderVersion)
+    val dockerImage = new DockerImage(buildPackCloner, dockerImageRunner)
+
   }
 }

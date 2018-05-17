@@ -34,6 +34,8 @@ object Main {
   private lazy val artifactoryUri     = EnvironmentVariables.artifactoryUri.getOrExit
   private lazy val gitHubApiUser      = EnvironmentVariables.gitHubApiUser.getOrExit
   private lazy val gitHubApiToken     = EnvironmentVariables.gitHubApiToken.getOrExit
+  private lazy val workspace          = EnvironmentVariables.workspace.getOrExit
+  private lazy val javaVersion        = EnvironmentVariables.javaVersion.getOrExit
 
   private lazy implicit val system: ActorSystem    = ActorSystem()
   private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -48,7 +50,9 @@ object Main {
     new ArtifactFetcher(httpClient, artifactoryUri),
     new AppConfigBaseFetcher(httpClient, webstoreUri),
     new SlugFileAssembler(tarArchiver, new StartDockerScriptCreator()),
-    new DockerImage(Git.cloneRepository(), gitHubApiUser, gitHubApiToken, slugBuilderVersion)
+    new DockerImage(
+      new BuildPackCloner(Git.cloneRepository(), gitHubApiUser, gitHubApiToken),
+      new DockerImageRunner(workspace, webstoreUri, javaVersion, slugBuilderVersion))
   )
 
   def main(args: Array[String]): Unit = {
