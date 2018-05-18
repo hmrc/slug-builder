@@ -31,10 +31,11 @@ class SlugBuilder(
   dockerImage: DockerImage) {
 
   import progressReporter._
+  import slugChecker._
 
   def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, Unit, Unit] = {
     for {
-      _ <- slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion) map printSuccess
+      _ <- verifySlugNotCreatedYet(repositoryName, releaseVersion) map printSuccess
       _ <- artifactFetcher.download(repositoryName, releaseVersion) map printSuccess
       _ <- appConfigBaseFetcher.download(repositoryName) map printSuccess
       _ <- slugFileAssembler.assemble(repositoryName, releaseVersion) map printSuccess

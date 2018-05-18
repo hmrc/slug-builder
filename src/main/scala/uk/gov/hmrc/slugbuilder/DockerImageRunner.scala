@@ -17,16 +17,19 @@
 package uk.gov.hmrc.slugbuilder
 
 import java.nio.file.{Files, Paths}
+
 import cats.data.EitherT
 import cats.implicits._
 import com.github.dockerjava.api.model.Volume
 import com.github.dockerjava.core.DockerClientBuilder
+import uk.gov.hmrc.slugbuilder.functions.SlugArtifactName
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
-import scala.collection.JavaConversions._
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
-class DockerImageRunner(workspaceUri: String, webstoreUri: String, javaVersion: String, slugBuilderVersion: String) {
+import scala.collection.JavaConversions._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+class DockerImageRunner(workspaceUri: String, webstoreUri: String, javaVersion: String, slugBuilderVersion: String, slugArtifactName: SlugArtifactName) {
 
   def run(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] =
     EitherT
@@ -65,6 +68,6 @@ class DockerImageRunner(workspaceUri: String, webstoreUri: String, javaVersion: 
   }
 
   private def slugUrl(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
-    s"$webstoreUri/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+    s"$webstoreUri/slugs/$repositoryName/${slugArtifactName(repositoryName, releaseVersion)}"
 
 }

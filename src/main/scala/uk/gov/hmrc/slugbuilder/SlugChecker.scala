@@ -18,18 +18,19 @@ package uk.gov.hmrc.slugbuilder
 
 import cats.data.EitherT
 import play.api.libs.ws._
+import uk.gov.hmrc.slugbuilder.functions.SlugArtifactName
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-class SlugChecker(wSClient: StandaloneWSClient, webstoreUri: String, slugBuilderVersion: String) {
+class SlugChecker(wSClient: StandaloneWSClient, webstoreUri: String, slugArtifactName: SlugArtifactName) {
 
-  def checkIfDoesNotExist(
+  def verifySlugNotCreatedYet(
     repositoryName: RepositoryName,
     releaseVersion: ReleaseVersion): EitherT[Future, String, String] = EitherT[Future, String, String] {
 
-    val url = s"$webstoreUri/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+    val url = s"$webstoreUri/slugs/$repositoryName/${slugArtifactName(repositoryName, releaseVersion)}"
 
     wSClient
       .url(url)

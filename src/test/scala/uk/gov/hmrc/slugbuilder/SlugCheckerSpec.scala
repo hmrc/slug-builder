@@ -21,6 +21,7 @@ import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.ws.StandaloneWSClient
+import uk.gov.hmrc.slugbuilder.functions.SlugArtifactName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
@@ -28,7 +29,7 @@ import scala.concurrent.Future
 
 class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
 
-  "checkIfDoesNotExist" should {
+  "verifySlugNotCreatedYet" should {
 
     "return Left if slug already exists" in new Setup {
       (wsRequest.head _)
@@ -39,7 +40,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(200)
 
-      slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion).value.futureValue shouldBe
+      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion).value.futureValue shouldBe
         Left(s"Slug already exists at: $url")
     }
 
@@ -52,7 +53,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(404)
 
-      slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion).value.futureValue shouldBe
+      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion).value.futureValue shouldBe
         Right(s"No slug created yet at $url")
     }
 
@@ -67,7 +68,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
             .expects()
             .returning(status)
 
-          slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion).value.futureValue shouldBe
+          slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion).value.futureValue shouldBe
             Left(s"Cannot check if slug exists at $url. Returned status $status")
         }
       }
@@ -79,23 +80,28 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(Future.failed(exception))
 
-      slugChecker.checkIfDoesNotExist(repositoryName, releaseVersion).value.futureValue shouldBe
+      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion).value.futureValue shouldBe
         Left(s"Cannot check if slug exists at $url. Got exception: ${exception.getMessage}")
     }
   }
 
   private trait Setup {
-    val webstoreUri = "webstoreUri"
-    val slugBuilderVersion = "0.5.2"
-    val repositoryName = repositoryNameGen.generateOne
-    val releaseVersion = releaseVersionGen.generateOne
-    val wsClient = mock[StandaloneWSClient]
+    private val webstoreUri      = "webstoreUri"
+    private val artifactName     = nonEmptyStrings.generateOne
+    private val wsClient         = mock[StandaloneWSClient]
+    private val slugArtifactName = mock[SlugArtifactName]
+    val repositoryName           = repositoryNameGen.generateOne
+    val releaseVersion           = releaseVersionGen.generateOne
 
-    val slugChecker = new SlugChecker(wsClient, webstoreUri, slugBuilderVersion)
+    val slugChecker = new SlugChecker(wsClient, webstoreUri, slugArtifactName)
 
-    val url = s"$webstoreUri/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
-    val wsRequest = mock[TestWSRequest]
+    val url        = s"$webstoreUri/slugs/$repositoryName/$artifactName"
+    val wsRequest  = mock[TestWSRequest]
     val wsResponse = mock[wsRequest.Response]
+
+    (slugArtifactName.apply(_: RepositoryName, _: ReleaseVersion))
+      .expects(repositoryName, releaseVersion)
+      .returning(artifactName)
 
     (wsClient
       .url(_: String))

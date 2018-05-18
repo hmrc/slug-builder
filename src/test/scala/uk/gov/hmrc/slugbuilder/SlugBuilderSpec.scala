@@ -41,7 +41,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       "a docker image is created" in new Setup {
       forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
         (slugChecker
-          .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+          .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
           .expects(repositoryName, releaseVersion)
           .returning(rightT[Future, String]("Slug does not exist"))
 
@@ -84,7 +84,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
-        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
         .expects(repositoryName, releaseVersion)
         .returning(leftT[Future, String]("Slug does exist"))
 
@@ -98,7 +98,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
-        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
         .expects(repositoryName, releaseVersion)
         .returning(rightT[Future, String]("Slug does not exist"))
 
@@ -119,7 +119,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
-        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
         .expects(repositoryName, releaseVersion)
         .returning(rightT[Future, String]("Slug does not exist"))
 
@@ -147,7 +147,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
-        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
         .expects(repositoryName, releaseVersion)
         .returning(rightT[Future, String]("Slug does not exist"))
 
@@ -182,7 +182,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       val releaseVersion = releaseVersionGen.generateOne
 
       (slugChecker
-        .checkIfDoesNotExist(_: RepositoryName, _: ReleaseVersion))
+        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
         .expects(repositoryName, releaseVersion)
         .returning(rightT[Future, String]("Slug does not exist"))
 

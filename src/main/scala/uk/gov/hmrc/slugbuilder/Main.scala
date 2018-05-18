@@ -21,6 +21,7 @@ import akka.stream.ActorMaterializer
 import cats.implicits._
 import org.eclipse.jgit.api.Git
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
+import uk.gov.hmrc.slugbuilder.functions.SlugArtifactName
 import uk.gov.hmrc.slugbuilder.tools.TarArchiver
 
 import scala.concurrent.Await
@@ -43,16 +44,17 @@ object Main {
   private lazy val progressReporter = new ProgressReporter()
   private lazy val httpClient       = StandaloneAhcWSClient()
   private lazy val tarArchiver      = new TarArchiver()
+  private lazy val slugArtifactName = SlugArtifactName(slugBuilderVersion)
 
   private lazy val slugBuilder = new SlugBuilder(
     progressReporter,
-    new SlugChecker(httpClient, webstoreUri, slugBuilderVersion),
+    new SlugChecker(httpClient, webstoreUri, slugArtifactName),
     new ArtifactFetcher(httpClient, artifactoryUri),
     new AppConfigBaseFetcher(httpClient, webstoreUri),
     new SlugFileAssembler(tarArchiver, new StartDockerScriptCreator()),
     new DockerImage(
       new BuildPackCloner(Git.cloneRepository(), gitHubApiUser, gitHubApiToken),
-      new DockerImageRunner(workspace, webstoreUri, javaVersion, slugBuilderVersion))
+      new DockerImageRunner(workspace, webstoreUri, javaVersion, slugBuilderVersion, slugArtifactName))
   )
 
   def main(args: Array[String]): Unit = {
