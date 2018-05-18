@@ -14,7 +14,7 @@ lazy val slugBuilder = Project(appName, file("."))
   .settings(
     majorVersion := 0,
     scalaVersion := "2.11.12",
-    libraryDependencies ++= compile ++ test,
+    libraryDependencies ++= compileDependencies ++ testDependencies,
     retrieveManaged := true,
     assemblySettings,
     evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
@@ -22,7 +22,7 @@ lazy val slugBuilder = Project(appName, file("."))
     resolvers += Resolver.jcenterRepo
   )
 
-val compile = Seq(
+val compileDependencies = Seq(
   "com.github.docker-java" % "docker-java"             % "3.0.14" exclude ("org.apache.httpcomponents", "httpcore"),
   "com.typesafe.play"      %% "play-ahc-ws-standalone" % "1.1.2",
   "log4j"                  % "log4j"                   % "1.2.17",
@@ -33,7 +33,7 @@ val compile = Seq(
   "org.typelevel"          %% "cats-core"              % "1.0.1"
 )
 
-val test = Seq(
+val testDependencies = Seq(
   "org.mockito"    % "mockito-core" % "2.18.3" % Test,
   "org.pegdown"    % "pegdown"      % "1.6.0"  % Test,
   "org.scalacheck" %% "scalacheck"  % "1.14.0" % Test,
@@ -42,7 +42,7 @@ val test = Seq(
 )
 
 val assemblySettings = Seq(
-  assemblyJarName in assembly := "slug-builder.jar",
+  test in assembly := {},
   assemblyMergeStrategy in assembly := {
     case PathList("META-INF", xs @ _*)                                                           => MergeStrategy.discard
     case PathList("org", "apache", "commons", "logging", xs @ _*)                                => MergeStrategy.first
