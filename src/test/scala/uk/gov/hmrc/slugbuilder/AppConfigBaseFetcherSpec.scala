@@ -16,20 +16,17 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.file.{Files, Paths}
-
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{FileIO, Sink, Source}
-import akka.util.ByteString
+import cats.implicits._
+import cats.data.EitherT
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
-import play.api.libs.ws.StandaloneWSClient
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
+import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, DownloadError, FileDownloader, FileUrl}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class AppConfigBaseFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
@@ -37,110 +34,34 @@ class AppConfigBaseFetcherSpec extends WordSpec with MockFactory with ScalaFutur
   "download" should {
 
     "return Right if service's app-config-base can be downloaded from Webstore successfully" in new Setup {
-      (wsRequest.get _)
-        .expects()
-        .returning(Future.successful(wsResponse))
-
-      (wsResponse.status _)
-        .expects()
-        .returning(200)
-
-      val appConfigBaseContent = ByteString("some content")
-      (wsResponse.bodyAsSource _)
-        .expects()
-        .returning(Source.single(appConfigBaseContent))
+      (fileDownloader
+        .download(_: FileUrl, _: DestinationFileName))
+        .expects(fileUrl, destinationFileName)
+        .returning(EitherT.rightT[Future, DownloadError](()))
 
       appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
-        Right(s"app-config-base successfully downloaded from $url")
-
-      val pathToDownloadedFile = Paths.get(s"$repositoryName.conf")
-      pathToDownloadedFile.toFile.deleteOnExit()
-
-      Files.exists(pathToDownloadedFile) shouldBe true
-
-      FileIO
-        .fromPath(pathToDownloadedFile)
-        .runWith(Sink.fold(ByteString.empty)((content, line) => content concat line))
-        .futureValue shouldBe appConfigBaseContent
+        Right(s"app-config-base successfully downloaded from $fileUrl")
     }
 
-    "return Left if app-config-base cannot be downloaded from Webstore" in new Setup {
-      (wsRequest.get _)
-        .expects()
-        .returning(Future.successful(wsResponse))
-
-      (wsResponse.status _)
-        .expects()
-        .returning(200)
-
-      val downloadingException = new Exception("downloading problem")
-      (wsResponse.bodyAsSource _)
-        .expects()
-        .returning(Source.failed(downloadingException))
+    "return Left if there was an error when downloading app-config-base from Webstore" in new Setup {
+      val downloadingProblem = DownloadError("downloading problem")
+      (fileDownloader
+        .download(_: FileUrl, _: DestinationFileName))
+        .expects(fileUrl, destinationFileName)
+        .returning(EitherT.leftT[Future, Unit](downloadingProblem))
 
       appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
-        Left(s"app-config-base couldn't be downloaded from $url. Cause: ${downloadingException.getMessage}")
-
-      Paths.get(s"$repositoryName.conf").toFile.deleteOnExit()
-    }
-
-    "return Left if app-config-base does not exist" in new Setup {
-      (wsRequest.get _)
-        .expects()
-        .returning(Future.successful(wsResponse))
-
-      (wsResponse.status _)
-        .expects()
-        .returning(404)
-
-      appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
-        Left(s"app-config-base does not exist at: $url")
-    }
-
-    "return Left when got unexpected status from fetching app-config-base" in {
-      allHttpStatusCodes filterNot Seq(200, 404).contains foreach { status =>
-        new Setup {
-          (wsRequest.get _)
-            .expects()
-            .returning(Future.successful(wsResponse))
-
-          (wsResponse.status _)
-            .expects()
-            .returning(status)
-
-          appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
-            Left(s"Cannot fetch app-config-base from $url. Returned status $status")
-        }
-      }
-    }
-
-    "return Left if fetching app-config-base results in an exception" in new Setup {
-      val exception = new Exception("some error")
-      (wsRequest.get _)
-        .expects()
-        .returning(Future.failed(exception))
-
-      appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
-        Left(s"Cannot fetch app-config-base from $url. Got exception: ${exception.getMessage}")
+        Left(s"app-config-base couldn't be downloaded from $fileUrl. Cause: $downloadingProblem")
     }
   }
 
   private trait Setup {
-    val webstoreUri    = "webstoreUri"
-    val repositoryName = repositoryNameGen.generateOne
-    val url            = s"$webstoreUri/app-config-base/$repositoryName.conf"
+    val repositoryName      = repositoryNameGen.generateOne
+    val webstoreUri         = "webstoreUri"
+    val fileUrl             = FileUrl(s"$webstoreUri/app-config-base/$repositoryName.conf")
+    val destinationFileName = DestinationFileName(s"$repositoryName.conf")
 
-    implicit val system: ActorSystem    = ActorSystem()
-    implicit val mat: ActorMaterializer = ActorMaterializer()
-    val wsClient                        = mock[StandaloneWSClient]
-    val wsRequest                       = mock[TestWSRequest]
-    val wsResponse                      = mock[wsRequest.Response]
-
-    val appConfigBaseFetcher = new AppConfigBaseFetcher(wsClient, webstoreUri)
-
-    (wsClient
-      .url(_: String))
-      .expects(url)
-      .returning(wsRequest)
+    val fileDownloader       = mock[FileDownloader]
+    val appConfigBaseFetcher = new AppConfigBaseFetcher(fileDownloader, webstoreUri)
   }
 }

@@ -16,41 +16,26 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import akka.stream.{IOResult, Materializer}
 import cats.data.EitherT
-import play.api.libs.ws.StandaloneWSClient
-import uk.gov.hmrc.slugbuilder.tools.HttpClientTools._
+import cats.implicits._
+import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, FileDownloader, FileUrl}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.control.NonFatal
 
-class ArtifactFetcher(wSClient: StandaloneWSClient, artifactoryUri: String)(implicit materializer: Materializer) {
+class ArtifactFetcher(fileDownloader: FileDownloader, artifactoryUri: String) {
 
-  def download(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] =
-    EitherT[Future, String, String] {
+  def download(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] = {
 
-      val url =
-        s"$artifactoryUri/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
+    val fileUrl = FileUrl(
+      s"$artifactoryUri/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
+    )
 
-      wSClient
-        .url(url)
-        .get()
-        .flatMap { response =>
-          response.status match {
-            case 200 =>
-              response.toFile(s"$repositoryName-$releaseVersion.tgz")(
-                onSuccess = Right(s"Artifact successfully downloaded from $url"),
-                onFailure = (ioResult: IOResult) =>
-                  Left(s"Artifact couldn't be downloaded from $url. Cause: ${ioResult.getError.getMessage}")
-              )
-            case 404    => Future.successful(Left(s"Artifact does not exist at: $url"))
-            case status => Future.successful(Left(s"Cannot fetch artifact from $url. Returned status $status"))
-          }
-        }
-        .recover {
-          case NonFatal(exception) =>
-            Left(s"Cannot fetch artifact from $url. Got exception: ${exception.getMessage}")
-        }
-    }
+    fileDownloader
+      .download(fileUrl, DestinationFileName(s"$repositoryName-$releaseVersion.tgz"))
+      .bimap(
+        downloadError => s"Artifact couldn't be downloaded from $fileUrl. Cause: $downloadError",
+        _ => s"Artifact successfully downloaded from $fileUrl"
+      )
+  }
 }
