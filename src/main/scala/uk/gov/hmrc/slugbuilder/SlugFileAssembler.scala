@@ -26,6 +26,7 @@ import java.util.stream.{Stream => JavaStream}
 
 import cats.data.EitherT
 import cats.implicits._
+import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
 import uk.gov.hmrc.slugbuilder.tools.TarArchiver
 
@@ -50,7 +51,7 @@ class SlugFileAssembler(
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
   def assemble(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] = {
-    val artifact        = Paths.get(s"$repositoryName-$releaseVersion.tgz")
+    val artifact        = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
     val slugDirectory   = Paths.get("slug")
     val startDockerFile = slugDirectory resolve Paths.get("start-docker.sh")
     val procFile        = slugDirectory resolve Paths.get("Procfile")

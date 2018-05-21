@@ -22,14 +22,14 @@ import cats.data.EitherT
 import cats.implicits._
 import com.github.dockerjava.api.model.Volume
 import com.github.dockerjava.core.DockerClientBuilder
-import uk.gov.hmrc.slugbuilder.functions.SlugArtifactName
+import uk.gov.hmrc.slugbuilder.functions.SlugArtifactFileName
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class DockerImageRunner(workspaceUri: String, webstoreUri: String, javaVersion: String, slugBuilderVersion: String, slugArtifactName: SlugArtifactName) {
+class DockerImageRunner(workspaceUri: String, webstoreUri: String, javaVersion: String, slugBuilderVersion: String, slugArtifactName: SlugArtifactFileName) {
 
   def run(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] =
     EitherT

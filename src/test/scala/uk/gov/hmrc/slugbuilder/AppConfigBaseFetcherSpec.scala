@@ -22,6 +22,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
+import uk.gov.hmrc.slugbuilder.functions.AppConfigBaseFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, DownloadError, FileDownloader, FileUrl}
@@ -59,7 +60,7 @@ class AppConfigBaseFetcherSpec extends WordSpec with MockFactory with ScalaFutur
     val repositoryName      = repositoryNameGen.generateOne
     val webstoreUri         = "webstoreUri"
     val fileUrl             = FileUrl(s"$webstoreUri/app-config-base/$repositoryName.conf")
-    val destinationFileName = DestinationFileName(s"$repositoryName.conf")
+    val destinationFileName = DestinationFileName(AppConfigBaseFileName(repositoryName))
 
     val fileDownloader       = mock[FileDownloader]
     val appConfigBaseFetcher = new AppConfigBaseFetcher(fileDownloader, webstoreUri)

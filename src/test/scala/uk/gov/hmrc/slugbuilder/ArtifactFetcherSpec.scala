@@ -22,6 +22,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
+import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, DownloadError, FileDownloader, FileUrl}
@@ -60,7 +61,7 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
     val fileUrl = FileUrl(
       s"$artifactoryUri/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
     )
-    val destinationFileName = DestinationFileName(s"$repositoryName-$releaseVersion.tgz")
+    val destinationFileName = DestinationFileName(ArtifactFileName(repositoryName, releaseVersion))
 
     val fileDownloader                        = mock[FileDownloader]
     val artifactFetcher = new ArtifactFetcher(fileDownloader, artifactoryUri)

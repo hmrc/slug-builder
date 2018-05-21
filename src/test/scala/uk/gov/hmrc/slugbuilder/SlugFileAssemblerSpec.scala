@@ -28,6 +28,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
+import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.{releaseVersionGen, repositoryNameGen}
 import uk.gov.hmrc.slugbuilder.tools.TarArchiver
@@ -241,7 +242,7 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
   private trait Setup {
     val repositoryName = repositoryNameGen.generateOne
     val releaseVersion = releaseVersionGen.generateOne
-    val artifactFile = Paths.get(s"$repositoryName-$releaseVersion.tgz")
+    val artifactFile = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
     val slugDirectory = Paths.get("slug")
     val startDockerFile = slugDirectory resolve "start-docker.sh"
     val procFile = slugDirectory resolve "Procfile"

@@ -18,7 +18,17 @@ package uk.gov.hmrc.slugbuilder.functions
 
 import uk.gov.hmrc.slugbuilder.{ReleaseVersion, RepositoryName}
 
-case class SlugArtifactName(slugBuilderVersion: String) extends ((RepositoryName, ReleaseVersion) => String) {
+case class SlugArtifactFileName(slugBuilderVersion: String) extends ((RepositoryName, ReleaseVersion) => String) {
   override def apply(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
     s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+}
+
+object ArtifactFileName {
+  def apply(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
+    s"$repositoryName-$releaseVersion.tgz"
+}
+
+object AppConfigBaseFileName {
+  def apply(repositoryName: RepositoryName): String =
+    s"$repositoryName.conf"
 }

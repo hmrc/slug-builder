@@ -21,7 +21,7 @@ import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.ws.StandaloneWSClient
-import uk.gov.hmrc.slugbuilder.functions.SlugArtifactName
+import uk.gov.hmrc.slugbuilder.functions.SlugArtifactFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
@@ -86,20 +86,21 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
   }
 
   private trait Setup {
-    private val webstoreUri      = "webstoreUri"
-    private val artifactName     = nonEmptyStrings.generateOne
-    private val wsClient         = mock[StandaloneWSClient]
-    private val slugArtifactName = mock[SlugArtifactName]
-    val repositoryName           = repositoryNameGen.generateOne
-    val releaseVersion           = releaseVersionGen.generateOne
+    private val webstoreUri          = "webstoreUri"
+    private val artifactName         = nonEmptyStrings.generateOne
+    private val wsClient             = mock[StandaloneWSClient]
+    private val slugArtifactFileName = mock[SlugArtifactFileName]
+    val repositoryName               = repositoryNameGen.generateOne
+    val releaseVersion               = releaseVersionGen.generateOne
 
-    val slugChecker = new SlugChecker(wsClient, webstoreUri, slugArtifactName)
+    val slugChecker = new SlugChecker(wsClient, webstoreUri, slugArtifactFileName)
 
     val url        = s"$webstoreUri/slugs/$repositoryName/$artifactName"
     val wsRequest  = mock[TestWSRequest]
     val wsResponse = mock[wsRequest.Response]
 
-    (slugArtifactName.apply(_: RepositoryName, _: ReleaseVersion))
+    (slugArtifactFileName
+      .apply(_: RepositoryName, _: ReleaseVersion))
       .expects(repositoryName, releaseVersion)
       .returning(artifactName)
 

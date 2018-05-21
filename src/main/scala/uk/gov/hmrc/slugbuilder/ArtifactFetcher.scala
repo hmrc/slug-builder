@@ -18,6 +18,7 @@ package uk.gov.hmrc.slugbuilder
 
 import cats.data.EitherT
 import cats.implicits._
+import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, FileDownloader, FileUrl}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -32,7 +33,7 @@ class ArtifactFetcher(fileDownloader: FileDownloader, artifactoryUri: String) {
     )
 
     fileDownloader
-      .download(fileUrl, DestinationFileName(s"$repositoryName-$releaseVersion.tgz"))
+      .download(fileUrl, DestinationFileName(ArtifactFileName(repositoryName, releaseVersion)))
       .bimap(
         downloadError => s"Artifact couldn't be downloaded from $fileUrl. Cause: $downloadError",
         _ => s"Artifact successfully downloaded from $fileUrl"

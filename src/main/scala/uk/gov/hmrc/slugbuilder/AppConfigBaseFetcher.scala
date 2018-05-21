@@ -18,6 +18,7 @@ package uk.gov.hmrc.slugbuilder
 
 import cats.data.EitherT
 import cats.implicits._
+import uk.gov.hmrc.slugbuilder.functions.AppConfigBaseFileName
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, FileDownloader, FileUrl}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -30,7 +31,7 @@ class AppConfigBaseFetcher(fileDownloader: FileDownloader, webstoreUri: String) 
     val fileUrl = FileUrl(s"$webstoreUri/app-config-base/$repositoryName.conf")
 
     fileDownloader
-      .download(fileUrl, DestinationFileName(s"$repositoryName.conf"))
+      .download(fileUrl, DestinationFileName(AppConfigBaseFileName(repositoryName)))
       .bimap(
         downloadError => s"app-config-base couldn't be downloaded from $fileUrl. Cause: $downloadError",
         _ => s"app-config-base successfully downloaded from $fileUrl"

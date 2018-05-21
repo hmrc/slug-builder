@@ -21,14 +21,36 @@ import org.scalatest.WordSpec
 import org.scalatest.prop.PropertyChecks
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
-class SlugArtifactNameSpec extends WordSpec with PropertyChecks {
+class SlugArtifactFileNameSpec extends WordSpec with PropertyChecks {
 
   "apply" should {
     "return a String comprised of repositoryName, releaseVersion and slugBuilderVersion" in {
       forAll(repositoryNameGen, releaseVersionGen, nonEmptyStrings) {
         (repositoryName, releaseVersion, slugBuilderVersion) =>
-          SlugArtifactName(slugBuilderVersion)
+          SlugArtifactFileName(slugBuilderVersion)
             .apply(repositoryName, releaseVersion) shouldBe s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+      }
+    }
+  }
+}
+
+class ArtifactFileNameSpec extends WordSpec with PropertyChecks {
+
+  "apply" should {
+    "return a String comprised of repositoryName and releaseVersion" in {
+      forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
+        ArtifactFileName(repositoryName, releaseVersion) shouldBe s"$repositoryName-$releaseVersion.tgz"
+      }
+    }
+  }
+}
+
+class AppConfigBaseFileNameSpec extends WordSpec with PropertyChecks {
+
+  "apply" should {
+    "return a String comprised of repositoryName" in {
+      forAll(repositoryNameGen) { repositoryName =>
+        AppConfigBaseFileName(repositoryName) shouldBe s"$repositoryName.conf"
       }
     }
   }

@@ -25,6 +25,7 @@ import java.nio.file.{OpenOption, Path, Paths}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
+import uk.gov.hmrc.slugbuilder.functions.AppConfigBaseFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.repositoryNameGen
 
@@ -149,7 +150,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
     val slugDirectory  = Paths.get("slug")
     val startDockerSh  = slugDirectory resolve "start-docker.sh"
     val confDirectory  = slugDirectory resolve "conf"
-    val appConfigBase  = Paths.get(s"$repositoryName.conf")
+    val appConfigBase  = Paths.get(AppConfigBaseFileName(repositoryName))
 
     val createDir            = mockFunction[Path, Unit]
     val checkFileExist       = mockFunction[Path, Boolean]
