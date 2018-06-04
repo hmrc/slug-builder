@@ -54,7 +54,7 @@ val assemblySettings = Seq(
     case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl$AFUNIXOutputStream.class") => MergeStrategy.first
     case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl$Lenient.class")            => MergeStrategy.first
     case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl.class")                    => MergeStrategy.first
-    case x => (assemblyMergeStrategy in assembly).value(x)
+    case x                                                                                       => (assemblyMergeStrategy in assembly).value(x)
   },
   artifact in (Compile, assembly) := {
     val art = (artifact in (Compile, assembly)).value

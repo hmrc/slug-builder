@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import java.nio.file.Paths
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.implicits._
@@ -23,7 +24,6 @@ import org.eclipse.jgit.api.Git
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import uk.gov.hmrc.slugbuilder.functions.SlugArtifactFileName
 import uk.gov.hmrc.slugbuilder.tools.{FileDownloader, TarArchiver}
-
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -37,13 +37,14 @@ object Main {
   private lazy val gitHubApiToken     = EnvironmentVariables.gitHubApiToken.getOrExit
   private lazy val workspace          = EnvironmentVariables.workspace.getOrExit
   private lazy val javaVersion        = EnvironmentVariables.javaVersion.getOrExit
+  private lazy val javaDownloadUri    = EnvironmentVariables.javaDownloadUri.getOrExit
+  private lazy val javaVendor         = EnvironmentVariables.javaVendor.getOrExit
 
   private lazy implicit val system: ActorSystem    = ActorSystem()
   private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
 
   private lazy val progressReporter     = new ProgressReporter()
   private lazy val httpClient           = StandaloneAhcWSClient()
-  private lazy val tarArchiver          = new TarArchiver()
   private lazy val fileDownloader       = new FileDownloader(httpClient)
   private lazy val slugArtifactFileName = SlugArtifactFileName(slugBuilderVersion)
 
@@ -52,11 +53,11 @@ object Main {
     new SlugChecker(httpClient, webstoreUri, slugArtifactFileName),
     new ArtifactFetcher(fileDownloader, artifactoryUri),
     new AppConfigBaseFetcher(fileDownloader, webstoreUri),
-    new SlugFileAssembler(tarArchiver, new StartDockerScriptCreator()),
-    new DockerImage(
-      new BuildPackCloner(Git.cloneRepository(), gitHubApiUser, gitHubApiToken),
-      new DockerImageRunner(workspace, webstoreUri, javaVersion, slugBuilderVersion, slugArtifactFileName)
-    )
+    new SlugFileAssembler(
+      progressReporter,
+      new TarArchiver(),
+      new StartDockerScriptCreator(),
+      new AssemblerSteps(fileDownloader, javaDownloadUri, javaVendor, javaVersion))
   )
 
   def main(args: Array[String]): Unit = {

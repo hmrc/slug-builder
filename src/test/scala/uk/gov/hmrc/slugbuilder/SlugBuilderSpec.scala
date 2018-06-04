@@ -37,8 +37,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       "slug for the given version of the microservice does not exist and " +
       "microservice artifact can be downloaded and " +
       "app-config-base can be downloaded and " +
-      "a slug file is assembled and " +
-      "a docker image is created" in new Setup {
+      "a slug file is assembled" in new Setup {
       forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
         (slugChecker
           .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
@@ -68,12 +67,12 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
 
         (progressReporter.printSuccess(_: String)).expects("Slug assembled")
 
-        (dockerImage
-          .create(_: RepositoryName, _: ReleaseVersion))
-          .expects(repositoryName, releaseVersion)
-          .returning(rightT[Future, String]("Image created"))
-
-        (progressReporter.printSuccess(_: String)).expects("Image created")
+//        (dockerImage
+//          .create(_: RepositoryName, _: ReleaseVersion))
+//          .expects(repositoryName, releaseVersion)
+//          .returning(rightT[Future, String]("Image created"))
+//
+//        (progressReporter.printSuccess(_: String)).expects("Image created")
 
         slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('right)
       }
@@ -177,7 +176,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
     }
 
-    "not create the slug if docker image creation step failed" in new Setup {
+    "not create the slug if docker image creation step failed" ignore new Setup {
       val repositoryName = repositoryNameGen.generateOne
       val releaseVersion = releaseVersionGen.generateOne
 
@@ -209,12 +208,12 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
 
       (progressReporter.printSuccess(_: String)).expects("Slug assembled")
 
-      (dockerImage
-        .create(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(leftT[Future, String]("Docker image creation failure"))
-
-      (progressReporter.printError(_: String)).expects("Docker image creation failure")
+//      (dockerImage
+//        .create(_: RepositoryName, _: ReleaseVersion))
+//        .expects(repositoryName, releaseVersion)
+//        .returning(leftT[Future, String]("Docker image creation failure"))
+//
+//      (progressReporter.printError(_: String)).expects("Docker image creation failure")
 
       slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
     }
@@ -226,15 +225,13 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
     val artifactFetcher      = mock[ArtifactFetcher]
     val appConfigBaseFetcher = mock[AppConfigBaseFetcher]
     val slugFileAssembler    = mock[SlugFileAssembler]
-    val dockerImage          = mock[DockerImage]
 
     val slugBuilder = new SlugBuilder(
       progressReporter,
       slugChecker,
       artifactFetcher,
       appConfigBaseFetcher,
-      slugFileAssembler,
-      dockerImage
+      slugFileAssembler
     )
   }
 }

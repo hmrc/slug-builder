@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import cats.implicits._
+import cats.data.EitherT._
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.StandardOpenOption.CREATE_NEW
@@ -23,7 +25,7 @@ import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermission._
 import java.nio.file.{OpenOption, Path, Paths}
 import java.util.stream.{Stream => JavaStream}
-
+import cats.data.EitherT
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
@@ -31,9 +33,10 @@ import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.{releaseVersionGen, repositoryNameGen}
-import uk.gov.hmrc.slugbuilder.tools.TarArchiver
-
+import uk.gov.hmrc.slugbuilder.tools.{DownloadError, FileDownloader, TarArchiver}
+import scala.concurrent.Future
 import scala.language.implicitConversions
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory {
 
@@ -43,9 +46,13 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
       "extract the artifact into it, " +
       "assure 'start-docker.sh' file exist in the 'slug' directory and " +
       "it has 755 permissions and " +
-      "a 'Procfile' is created in the 'slug' directory" in new Setup {
+      "a 'Procfile' is created in the 'slug' directory and" +
+      "create the .jdk dir in the 'slug' directory and" +
+      "download the JDK and" +
+      "untar the JDK into the '.jdk' directory" in new Setup {
 
-      createDir
+      (assemblerSteps
+        .createDir(_: Path))
         .expects(slugDirectory)
         .returning(())
 
@@ -59,25 +66,42 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .expects(slugDirectory, repositoryName)
         .returning(Right(()))
 
-      setPermissions
+      (assemblerSteps
+        .setPermissions(_: Path, _: Set[PosixFilePermission]))
         .expects(
           startDockerFile,
           Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
         .returning(())
 
-      createFile
+      (assemblerSteps
+        .createFile(_: Path, _: String, _: Charset, _: OpenOption))
         .expects(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
         .returning(())
 
-      val filesInSlugDir: JavaStream[Path] = JavaStream.empty()
-      listFiles
-        .expects(slugDirectory)
-        .returning(filesInSlugDir)
-
-      (archiver
-        .tar(_: Path, _: JavaStream[Path]))
-        .expects(slugTarFile, filesInSlugDir)
+      (assemblerSteps
+        .createDir(_: Path))
+        .expects(slugDirectory.resolve(".jdk"))
         .returning(())
+
+      (assemblerSteps.downloadJdk _)
+        .expects()
+        .returning(EitherT.rightT[Future, String](s"Successfully downloaded JDK from $javaDownloadUri"))
+
+//      (assemblerSteps.untarJdk)
+
+//      val filesInSlugDir: JavaStream[Path] = JavaStream.empty()
+//      listFiles
+//        .expects(slugDirectory)
+//        .returning(filesInSlugDir)
+
+//      (buildPackRunner.detect _)
+//        .expects()
+//        .returning(Right("Java Jar"))
+
+//      (archiver
+//        .tar(_: Path, _: JavaStream[Path]))
+//        .expects(slugTarFile, filesInSlugDir)
+//        .returning(())
 
       assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Right(
         s"$slugTarFile slug file assembled"
@@ -86,7 +110,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
 
     "return error message when slug directory cannot be created" in new Setup {
       val exception = new Exception("exception message")
-      createDir
+      (assemblerSteps
+        .createDir(_: Path))
         .expects(slugDirectory)
         .throwing(exception)
 
@@ -96,7 +121,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
     }
 
     "return error message when artifact cannot be extracted" in new Setup {
-      createDir
+      (assemblerSteps
+        .createDir(_: Path))
         .expects(slugDirectory)
         .returning(())
 
@@ -112,7 +138,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
     }
 
     "return error when start-docker.sh creation return left" in new Setup {
-      createDir
+      (assemblerSteps
+        createDir (_: Path))
         .expects(slugDirectory)
         .returning(())
 
@@ -131,7 +158,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
     }
 
     "return error when start-docker.sh permissions cannot be changed" in new Setup {
-      createDir
+      (assemblerSteps
+        createDir (_: Path))
         .expects(slugDirectory)
         .returning(())
 
@@ -146,7 +174,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .returning(Right(()))
 
       val exception = new Exception("exception message")
-      setPermissions
+      (assemblerSteps
+        .setPermissions(_: Path, _: Set[PosixFilePermission]))
         .expects(
           startDockerFile,
           Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
@@ -158,7 +187,8 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
     }
 
     "return error if creating the Procfile fails" in new Setup {
-      createDir
+      (assemblerSteps
+        createDir (_: Path))
         .expects(slugDirectory)
         .returning(())
 
@@ -172,14 +202,16 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .expects(slugDirectory, repositoryName)
         .returning(Right(()))
 
-      setPermissions
+      (assemblerSteps
+        .setPermissions(_: Path, _: Set[PosixFilePermission]))
         .expects(
           startDockerFile,
           Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
         .returning(())
 
       val exception = new Exception("exception message")
-      createFile
+      (assemblerSteps
+        .createFile(_: Path, _: String, _: Charset, _: OpenOption))
         .expects(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
         .throwing(exception)
 
@@ -188,8 +220,9 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
       )
     }
 
-    "return error if creating the slug tar fails" in new Setup {
-      createDir
+    "return error if creating the .jdk directory fails" in new Setup {
+      (assemblerSteps
+        createDir (_: Path))
         .expects(slugDirectory)
         .returning(())
 
@@ -203,35 +236,117 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
         .expects(slugDirectory, repositoryName)
         .returning(Right(()))
 
-      setPermissions
+      (assemblerSteps
+        .setPermissions(_: Path, _: Set[PosixFilePermission]))
         .expects(
           startDockerFile,
           Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
         .returning(())
 
-      createFile
+      (assemblerSteps
+        .createFile(_: Path, _: String, _: Charset, _: OpenOption))
         .expects(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
         .returning(())
 
-      val filesInSlugDir: JavaStream[Path] = JavaStream.empty()
-      listFiles
-        .expects(slugDirectory)
-        .returning(filesInSlugDir)
-
       val exception = new Exception("exception message")
-      (archiver
-        .tar(_: Path, _: JavaStream[Path]))
-        .expects(slugTarFile, filesInSlugDir)
+      (assemblerSteps
+        .createDir(_: Path))
+        .expects(slugDirectory.resolve(".jdk"))
         .throwing(exception)
 
       assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Left(
-        s"Couldn't create the $slugTarFile. Cause: $exception"
-      )
+        s"Couldn't create .jdk directory at $slugDirectory/.jdk. Cause: ${exception.getMessage}")
+    }
+
+    "return error if downloading the JDK fails" in new Setup {
+      (assemblerSteps
+        createDir (_: Path))
+        .expects(slugDirectory)
+        .returning(())
+
+      (archiver
+        .decompress(_: Path, _: Path))
+        .expects(artifactFile, slugDirectory)
+        .returning(())
+
+      (startDockerShCreator
+        .ensureStartDockerExists(_: Path, _: RepositoryName))
+        .expects(slugDirectory, repositoryName)
+        .returning(Right(()))
+
+      (assemblerSteps
+        .setPermissions(_: Path, _: Set[PosixFilePermission]))
+        .expects(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+        .returning(())
+
+      (assemblerSteps
+        .createFile(_: Path, _: String, _: Charset, _: OpenOption))
+        .expects(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
+        .returning(())
+
+      (assemblerSteps
+        .createDir(_: Path))
+        .expects(slugDirectory.resolve(".jdk"))
+        .returning(())
+
+      (assemblerSteps.downloadJdk _)
+        .expects()
+        .returning(EitherT.leftT[Future, String]("Error downloading JDK"))
+
+      assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Left(
+        s"Couldn't download the JDK from ${assemblerSteps.javaDownloadUri}. Cause: Error downloading JDK")
+    }
+
+    "return error if creating the slug tar fails" ignore new Setup {
+      (assemblerSteps
+        createDir (_: Path))
+        .expects(slugDirectory)
+        .returning(())
+
+      (archiver
+        .decompress(_: Path, _: Path))
+        .expects(artifactFile, slugDirectory)
+        .returning(())
+
+      (startDockerShCreator
+        .ensureStartDockerExists(_: Path, _: RepositoryName))
+        .expects(slugDirectory, repositoryName)
+        .returning(Right(()))
+
+      (assemblerSteps
+        .setPermissions(_: Path, _: Set[PosixFilePermission]))
+        .expects(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+        .returning(())
+
+      (assemblerSteps
+        .createFile(_: Path, _: String, _: Charset, _: OpenOption))
+        .expects(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
+        .returning(())
+
+//      val filesInSlugDir: JavaStream[Path] = JavaStream.empty()
+//      listFiles
+//        .expects(slugDirectory)
+//        .returning(filesInSlugDir)
+
+//      val exception = new Exception("exception message")
+//      (archiver
+//        .tar(_: Path, _: JavaStream[Path]))
+//        .expects(slugTarFile, filesInSlugDir)
+//        .throwing(exception)
+
+//      assembler.assemble(repositoryName, releaseVersion).value.futureValue shouldBe Left(
+//        s"Couldn't create the $slugTarFile. Cause: $exception"
+//      )
     }
 
     "not catch fatal Errors" in new Setup {
       val error = new OutOfMemoryError("error")
-      createDir
+      (assemblerSteps
+        createDir (_: Path))
         .expects(slugDirectory)
         .throwing(error)
 
@@ -240,20 +355,24 @@ class SlugFileAssemblerSpec extends WordSpec with ScalaFutures with MockFactory 
   }
 
   private trait Setup {
-    val repositoryName = repositoryNameGen.generateOne
-    val releaseVersion = releaseVersionGen.generateOne
-    val artifactFile = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
-    val slugDirectory = Paths.get("slug")
+    val repositoryName  = repositoryNameGen.generateOne
+    val releaseVersion  = releaseVersionGen.generateOne
+    val artifactFile    = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
+    val slugDirectory   = Paths.get("slug")
     val startDockerFile = slugDirectory resolve "start-docker.sh"
-    val procFile = slugDirectory resolve "Procfile"
-    val slugTarFile = Paths.get(s"$repositoryName-$releaseVersion.tar")
+    val procFile        = slugDirectory resolve "Procfile"
+    val slugTarFile     = Paths.get(s"$repositoryName-$releaseVersion.tar")
+    val javaDownloadUri = "javaDownloadUri"
+    val javaVendor      = "javaVendor"
+    val javaVersion     = "javaVersion"
 
-    val archiver = mock[TarArchiver]
+    val progressReporter     = mock[ProgressReporter]
+    val archiver             = mock[TarArchiver]
     val startDockerShCreator = mock[StartDockerScriptCreator]
-    val createDir = mockFunction[Path, Unit]
-    val setPermissions = mockFunction[Path, Set[PosixFilePermission], Unit]
-    val createFile = mockFunction[Path, String, Charset, OpenOption, Unit]
-    val listFiles = mockFunction[Path, JavaStream[Path]]
-    val assembler = new SlugFileAssembler(archiver, startDockerShCreator, createDir, setPermissions, createFile, listFiles)
+    val assemblerSteps       = mock[AssemblerSteps]
+
+    val assembler =
+      new SlugFileAssembler(progressReporter, archiver, startDockerShCreator, assemblerSteps)
+
   }
 }

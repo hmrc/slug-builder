@@ -27,8 +27,7 @@ class SlugBuilder(
   slugChecker: SlugChecker,
   artifactFetcher: ArtifactFetcher,
   appConfigBaseFetcher: AppConfigBaseFetcher,
-  slugFileAssembler: SlugFileAssembler,
-  dockerImage: DockerImage) {
+  slugFileAssembler: SlugFileAssembler) {
 
   import progressReporter._
   import slugChecker._
@@ -39,7 +38,6 @@ class SlugBuilder(
       _ <- artifactFetcher.download(repositoryName, releaseVersion) map printSuccess
       _ <- appConfigBaseFetcher.download(repositoryName) map printSuccess
       _ <- slugFileAssembler.assemble(repositoryName, releaseVersion) map printSuccess
-      _ <- dockerImage.create(repositoryName, releaseVersion) map printSuccess
     } yield ()
   }.leftMap(printError)
 }
