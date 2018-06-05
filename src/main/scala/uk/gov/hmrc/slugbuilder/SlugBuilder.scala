@@ -33,7 +33,8 @@ class SlugBuilder(
   jdkFetcher: JdkFetcher,
   archiver: TarArchiver,
   startDockerScriptCreator: StartDockerScriptCreator,
-  fileUtils: FileUtils) {
+  fileUtils: FileUtils,
+  cliTools: CLITools) {
 
   import progressReporter._
   import slugChecker._
@@ -67,7 +68,12 @@ class SlugBuilder(
       _ <- perform(createDir(slugDirectory.resolve(".jdk"))).leftMap(exception =>
             s"Couldn't create .jdk directory at $slugDirectory/.jdk. Cause: ${exception.getMessage}")
       _ <- jdkFetcher.download
-            .leftMap(message => s"Couldn't download the JDK from ${jdkFetcher.javaDownloadUri}. Cause: $message")
+            .bimap(
+              message => s"Couldn't download the JDK from ${jdkFetcher.javaDownloadUri}. Cause: $message",
+              _ => "Successfully downloaded the JDK") map printSuccess
+      _ <- cliTools
+            .run(Array("tar", "-pxzf", jdkFetcher.destinationFileName, "-C", slugDirectory.resolve(".jdk").toString))
+            .bimap(error => s"Couldn't untar the JDK. Cause: $error", _ => "Successfully untarred the JDK") map printSuccess
     } yield ()
   }.leftMap(printError)
 }

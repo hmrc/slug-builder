@@ -21,7 +21,7 @@ import akka.stream.ActorMaterializer
 import cats.implicits._
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import uk.gov.hmrc.slugbuilder.functions.SlugArtifactFileName
-import uk.gov.hmrc.slugbuilder.tools.{FileDownloader, FileUtils, TarArchiver}
+import uk.gov.hmrc.slugbuilder.tools.{CLITools, FileDownloader, FileUtils, TarArchiver}
 import scala.language.postfixOps
 
 object Main {
@@ -52,7 +52,8 @@ object Main {
     new JdkFetcher(fileDownloader, javaDownloadUri, javaVendor, javaVersion),
     new TarArchiver(),
     new StartDockerScriptCreator(),
-    new FileUtils()
+    new FileUtils(),
+    new CLITools(progressReporter)
   )
 
   def main(args: Array[String]): Unit = {

@@ -79,9 +79,11 @@ class JdkFetcher(
   def createFile(file: Path, content: String, charset: Charset, openOption: OpenOption): Unit =
     Files.write(file, Seq(content), charset, openOption)
 
+  def destinationFileName = s"$javaVendor-$javaVersion.tgz"
+
   def download: Either[String, String] =
     fileDownloader
-      .download(FileUrl(javaDownloadUri), DestinationFileName(s"$javaVendor-$javaVersion.tgz"))
+      .download(FileUrl(javaDownloadUri), DestinationFileName(destinationFileName))
       .bimap(
         downloadError => s"JDK couldn't be downloaded from $javaDownloadUri. Cause: $downloadError",
         _ => s"Successfully downloaded JDK from $javaDownloadUri"

@@ -20,8 +20,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission._
-import org.mockito.Mockito
-import org.mockito.Mockito.{doNothing, doThrow, reset, when}
+import org.mockito.Mockito.{doNothing, doThrow, when}
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.mockito.MockitoSugar
@@ -29,7 +28,7 @@ import org.scalatest.prop.PropertyChecks
 import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
-import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
+import uk.gov.hmrc.slugbuilder.tools.{CLITools, FileUtils, TarArchiver}
 
 class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
 
@@ -46,6 +45,8 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
+      progressReporter.logs should contain("Successfully downloaded the JDK")
+      progressReporter.logs should contain("Successfully untarred the JDK")
 
     }
 
@@ -182,6 +183,7 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
     val tarArchiver              = mock[TarArchiver]
     val startDockerScriptCreator = mock[StartDockerScriptCreator]
     val fileUtils                = mock[FileUtils]
+    val cliTools                 = mock[CLITools]
 
     val slugBuilder = new SlugBuilder(
       progressReporter,
@@ -191,7 +193,8 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
       jdkFetcher,
       tarArchiver,
       startDockerScriptCreator,
-      fileUtils)
+      fileUtils,
+      cliTools)
 
     when(slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion))
       .thenReturn(Right("Slug does not exist"))
@@ -222,5 +225,9 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
     when(jdkFetcher.download)
       .thenReturn(Right(s"Successfully downloaded JDK from $javaDownloadUri"))
 
+    when(jdkFetcher.destinationFileName).thenReturn("jdk.tgz")
+
+    when(cliTools.run(Array("tar", "-pxzf", "jdk.tgz", "-C", slugDirectory.resolve(".jdk").toString)))
+      .thenReturn(Right(()))
   }
 }
