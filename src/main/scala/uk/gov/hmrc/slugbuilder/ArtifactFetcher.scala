@@ -16,17 +16,13 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.data.EitherT
 import cats.implicits._
 import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, FileDownloader, FileUrl}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
 class ArtifactFetcher(fileDownloader: FileDownloader, artifactoryUri: String) {
 
-  def download(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): EitherT[Future, String, String] = {
+  def download(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
 
     val fileUrl = FileUrl(
       s"$artifactoryUri/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"

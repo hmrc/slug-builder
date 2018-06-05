@@ -16,20 +16,22 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.data.EitherT._
-import cats.implicits._
-import org.scalamock.scalatest.MockFactory
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.attribute.PosixFilePermission._
+import org.mockito.Mockito
+import org.mockito.Mockito.{doNothing, doThrow, reset, when}
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.prop.PropertyChecks
+import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
+import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with ScalaFutures {
+class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
 
   "create" should {
 
@@ -38,200 +40,187 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockFactory with
       "microservice artifact can be downloaded and " +
       "app-config-base can be downloaded and " +
       "a slug file is assembled" in new Setup {
-      forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
-        (slugChecker
-          .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
-          .expects(repositoryName, releaseVersion)
-          .returning(rightT[Future, String]("Slug does not exist"))
 
-        (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
+      slugBuilder.create(repositoryName, releaseVersion) should be('right)
 
-        (artifactFetcher
-          .download(_: RepositoryName, _: ReleaseVersion))
-          .expects(repositoryName, releaseVersion)
-          .returning(rightT[Future, String]("Artifact downloaded"))
+      progressReporter.logs should contain("Slug does not exist")
+      progressReporter.logs should contain("Artifact downloaded")
+      progressReporter.logs should contain("app-config-base downloaded")
 
-        (progressReporter.printSuccess(_: String)).expects("Artifact downloaded")
-
-        (appConfigBaseFetcher
-          .download(_: RepositoryName))
-          .expects(repositoryName)
-          .returning(rightT[Future, String]("app-config-base downloaded"))
-
-        (progressReporter.printSuccess(_: String)).expects("app-config-base downloaded")
-
-        (slugFileAssembler
-          .assemble(_: RepositoryName, _: ReleaseVersion))
-          .expects(repositoryName, releaseVersion)
-          .returning(rightT[Future, String]("Slug assembled"))
-
-        (progressReporter.printSuccess(_: String)).expects("Slug assembled")
-
-//        (dockerImage
-//          .create(_: RepositoryName, _: ReleaseVersion))
-//          .expects(repositoryName, releaseVersion)
-//          .returning(rightT[Future, String]("Image created"))
-//
-//        (progressReporter.printSuccess(_: String)).expects("Image created")
-
-        slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('right)
-      }
     }
 
     "not create the slug if it already exists in the Webstore" in new Setup {
-      val repositoryName = repositoryNameGen.generateOne
-      val releaseVersion = releaseVersionGen.generateOne
+      when(slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion))
+        .thenReturn(Left("Slug does exist"))
 
-      (slugChecker
-        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(leftT[Future, String]("Slug does exist"))
-
-      (progressReporter.printError(_: String)).expects("Slug does exist")
-
-      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs                              should contain("Slug does exist")
     }
 
     "not create the slug if there is no artifact in the Artifactory" in new Setup {
-      val repositoryName = repositoryNameGen.generateOne
-      val releaseVersion = releaseVersionGen.generateOne
 
-      (slugChecker
-        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(rightT[Future, String]("Slug does not exist"))
+      when(artifactFetcher.download(repositoryName, releaseVersion))
+        .thenReturn(Left("Artifact does not exist"))
 
-      (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
-
-      (artifactFetcher
-        .download(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(leftT[Future, String]("Artifact does not exist"))
-
-      (progressReporter.printError(_: String)).expects("Artifact does not exist")
-
-      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs                              should contain("Artifact does not exist")
     }
 
     "not create the slug if there is app-config-base in the Webstore" in new Setup {
-      val repositoryName = repositoryNameGen.generateOne
-      val releaseVersion = releaseVersionGen.generateOne
 
-      (slugChecker
-        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(rightT[Future, String]("Slug does not exist"))
+      when(appConfigBaseFetcher.download(repositoryName))
+        .thenReturn(Left("app-config-base does not exist"))
 
-      (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
-
-      (artifactFetcher
-        .download(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(rightT[Future, String]("Artifact downloaded"))
-
-      (progressReporter.printSuccess(_: String)).expects("Artifact downloaded")
-
-      (appConfigBaseFetcher
-        .download(_: RepositoryName))
-        .expects(repositoryName)
-        .returning(leftT[Future, String]("app-config-base does not exist"))
-
-      (progressReporter.printError(_: String)).expects("app-config-base does not exist")
-
-      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs                              should contain("app-config-base does not exist")
     }
 
-    "not create the slug if slug assembly step failed" in new Setup {
-      val repositoryName = repositoryNameGen.generateOne
-      val releaseVersion = releaseVersionGen.generateOne
+    "return error message when slug directory cannot be created" in new Setup {
 
-      (slugChecker
-        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(rightT[Future, String]("Slug does not exist"))
+      val exception = new RuntimeException("exception message")
+      doThrow(exception).when(fileUtils).createDir(slugDirectory)
 
-      (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
-
-      (artifactFetcher
-        .download(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(rightT[Future, String]("Artifact downloaded"))
-
-      (progressReporter.printSuccess(_: String)).expects("Artifact downloaded")
-
-      (appConfigBaseFetcher
-        .download(_: RepositoryName))
-        .expects(repositoryName)
-        .returning(rightT[Future, String]("app-config-base downloaded"))
-
-      (progressReporter.printSuccess(_: String)).expects("app-config-base downloaded")
-
-      (slugFileAssembler
-        .assemble(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(leftT[Future, String]("Slug file assembly failure"))
-
-      (progressReporter.printError(_: String)).expects("Slug file assembly failure")
-
-      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs should contain(
+        s"Couldn't create slug directory at ${slugDirectory.toFile.getName}. Cause: ${exception.getMessage}")
     }
 
-    "not create the slug if docker image creation step failed" ignore new Setup {
-      val repositoryName = repositoryNameGen.generateOne
-      val releaseVersion = releaseVersionGen.generateOne
+    "return error message when artifact cannot be extracted" in new Setup {
+      val exception = new RuntimeException("exception message")
+      doThrow(exception).when(tarArchiver).decompress(artifactFile, slugDirectory)
 
-      (slugChecker
-        .verifySlugNotCreatedYet(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(rightT[Future, String]("Slug does not exist"))
-
-      (progressReporter.printSuccess(_: String)).expects("Slug does not exist")
-
-      (artifactFetcher
-        .download(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(rightT[Future, String]("Artifact downloaded"))
-
-      (progressReporter.printSuccess(_: String)).expects("Artifact downloaded")
-
-      (appConfigBaseFetcher
-        .download(_: RepositoryName))
-        .expects(repositoryName)
-        .returning(rightT[Future, String]("app-config-base downloaded"))
-
-      (progressReporter.printSuccess(_: String)).expects("app-config-base downloaded")
-
-      (slugFileAssembler
-        .assemble(_: RepositoryName, _: ReleaseVersion))
-        .expects(repositoryName, releaseVersion)
-        .returning(rightT[Future, String]("Slug assembled"))
-
-      (progressReporter.printSuccess(_: String)).expects("Slug assembled")
-
-//      (dockerImage
-//        .create(_: RepositoryName, _: ReleaseVersion))
-//        .expects(repositoryName, releaseVersion)
-//        .returning(leftT[Future, String]("Docker image creation failure"))
-//
-//      (progressReporter.printError(_: String)).expects("Docker image creation failure")
-
-      slugBuilder.create(repositoryName, releaseVersion).value.futureValue should be('left)
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs should contain(
+        s"Couldn't decompress artifact from ${artifactFile.toFile.getName}. Cause: $exception")
     }
+
+    "return error when start-docker.sh creation return left" in new Setup {
+
+      val errorMessage = "error message"
+      when(startDockerScriptCreator.ensureStartDockerExists(slugDirectory, repositoryName))
+        .thenReturn(Left(errorMessage))
+
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs                              should contain("error message")
+    }
+
+    "return error when start-docker.sh permissions cannot be changed" in new Setup {
+      val exception = new RuntimeException("exception message")
+      doThrow(exception)
+        .when(fileUtils)
+        .setPermissions(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs should contain(
+        s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
+    }
+
+    "return error if creating the Procfile fails" in new Setup {
+      val exception = new RuntimeException("exception message")
+      doThrow(exception).when(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
+
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs                              should contain(s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
+    }
+
+    "return error if creating the .jdk directory fails" in new Setup {
+      val exception = new RuntimeException("exception message")
+      doThrow(exception).when(fileUtils).createDir(slugDirectory.resolve(".jdk"))
+
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs should contain(
+        s"Couldn't create .jdk directory at $slugDirectory/.jdk. Cause: ${exception.getMessage}")
+    }
+
+    "return error if downloading the JDK fails" in new Setup {
+      when(jdkFetcher.download)
+        .thenReturn(Left("Error downloading JDK"))
+
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs should contain(
+        s"Couldn't download the JDK from ${jdkFetcher.javaDownloadUri}. Cause: Error downloading JDK")
+    }
+
+    "not catch fatal Errors" in new Setup {
+      val error = new OutOfMemoryError("error")
+      doThrow(error).when(fileUtils).createDir(slugDirectory)
+
+      intercept[Throwable](slugBuilder.create(repositoryName, releaseVersion)) shouldBe error
+    }
+
   }
 
   private trait Setup {
-    val progressReporter     = mock[ProgressReporter]
-    val slugChecker          = mock[SlugChecker]
-    val artifactFetcher      = mock[ArtifactFetcher]
-    val appConfigBaseFetcher = mock[AppConfigBaseFetcher]
-    val slugFileAssembler    = mock[SlugFileAssembler]
+    val repositoryName  = repositoryNameGen.generateOne
+    val releaseVersion  = releaseVersionGen.generateOne
+    val artifactFile    = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
+    val slugDirectory   = Paths.get("slug")
+    val startDockerFile = slugDirectory resolve "start-docker.sh"
+    val procFile        = slugDirectory resolve "Procfile"
+    val slugTarFile     = Paths.get(s"$repositoryName-$releaseVersion.tar")
+    val javaDownloadUri = "javaDownloadUri"
+
+    val progressReporter = new ProgressReporter {
+
+      var logs: List[String] = List.empty
+
+      override def printError(message: String): Unit = {
+        logs = logs :+ message
+        super.printSuccess(message)
+      }
+      override def printSuccess(message: String): Unit = {
+        logs = logs :+ message
+        super.printSuccess(message)
+      }
+    }
+    val slugChecker              = mock[SlugChecker]
+    val artifactFetcher          = mock[ArtifactFetcher]
+    val appConfigBaseFetcher     = mock[AppConfigBaseFetcher]
+    val jdkFetcher               = mock[JdkFetcher]
+    val tarArchiver              = mock[TarArchiver]
+    val startDockerScriptCreator = mock[StartDockerScriptCreator]
+    val fileUtils                = mock[FileUtils]
 
     val slugBuilder = new SlugBuilder(
       progressReporter,
       slugChecker,
       artifactFetcher,
       appConfigBaseFetcher,
-      slugFileAssembler
-    )
+      jdkFetcher,
+      tarArchiver,
+      startDockerScriptCreator,
+      fileUtils)
+
+    when(slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion))
+      .thenReturn(Right("Slug does not exist"))
+
+    when(artifactFetcher.download(repositoryName, releaseVersion))
+      .thenReturn(Right("Artifact downloaded"))
+
+    when(appConfigBaseFetcher.download(repositoryName))
+      .thenReturn(Right("app-config-base downloaded"))
+
+    doNothing().when(fileUtils).createDir(slugDirectory)
+
+    doNothing().when(tarArchiver).decompress(artifactFile, slugDirectory)
+
+    when(startDockerScriptCreator.ensureStartDockerExists(slugDirectory, repositoryName))
+      .thenReturn(Right(()))
+
+    doNothing()
+      .when(fileUtils)
+      .setPermissions(
+        startDockerFile,
+        Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+
+    doNothing().when(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
+
+    doNothing().when(fileUtils).createDir(slugDirectory.resolve(".jdk"))
+
+    when(jdkFetcher.download)
+      .thenReturn(Right(s"Successfully downloaded JDK from $javaDownloadUri"))
+
   }
 }

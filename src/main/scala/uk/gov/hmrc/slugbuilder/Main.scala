@@ -16,16 +16,12 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.file.Paths
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.implicits._
-import org.eclipse.jgit.api.Git
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import uk.gov.hmrc.slugbuilder.functions.SlugArtifactFileName
-import uk.gov.hmrc.slugbuilder.tools.{FileDownloader, TarArchiver}
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import uk.gov.hmrc.slugbuilder.tools.{FileDownloader, FileUtils, TarArchiver}
 import scala.language.postfixOps
 
 object Main {
@@ -53,11 +49,10 @@ object Main {
     new SlugChecker(httpClient, webstoreUri, slugArtifactFileName),
     new ArtifactFetcher(fileDownloader, artifactoryUri),
     new AppConfigBaseFetcher(fileDownloader, webstoreUri),
-    new SlugFileAssembler(
-      progressReporter,
-      new TarArchiver(),
-      new StartDockerScriptCreator(),
-      new AssemblerSteps(fileDownloader, javaDownloadUri, javaVendor, javaVersion))
+    new JdkFetcher(fileDownloader, javaDownloadUri, javaVendor, javaVersion),
+    new TarArchiver(),
+    new StartDockerScriptCreator(),
+    new FileUtils()
   )
 
   def main(args: Array[String]): Unit = {
@@ -65,8 +60,8 @@ object Main {
     val repositoryName = args.get("Repository name", atIdx = 0).flatMap(RepositoryName.create).getOrExit
     val releaseVersion = args.get("Release version", atIdx = 1).flatMap(ReleaseVersion.create).getOrExit
 
-    Await
-      .result(slugBuilder.create(repositoryName, releaseVersion).value, atMost = 2 minutes)
+    slugBuilder
+      .create(repositoryName, releaseVersion)
       .fold(
         _ => sys.exit(1),
         _ => sys.exit(0)

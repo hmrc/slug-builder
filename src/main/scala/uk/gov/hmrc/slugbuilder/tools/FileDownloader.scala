@@ -17,14 +17,12 @@
 package uk.gov.hmrc.slugbuilder.tools
 
 import java.nio.file.Paths
-
 import akka.stream.Materializer
 import akka.stream.scaladsl.FileIO
-import cats.data.EitherT
 import play.api.libs.ws.{StandaloneWSClient, StandaloneWSResponse}
-
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 
 case class FileUrl(value: String) {
@@ -45,8 +43,8 @@ case class DownloadError(message: String)
 
 class FileDownloader(wSClient: StandaloneWSClient)(implicit materializer: Materializer) {
 
-  def download(fileUrl: FileUrl, destinationFileName: DestinationFileName): EitherT[Future, DownloadError, Unit] =
-    EitherT[Future, DownloadError, Unit] {
+  def download(fileUrl: FileUrl, destinationFileName: DestinationFileName): Either[DownloadError, Unit] =
+    Await.result(
       wSClient
         .url(fileUrl.toString)
         .get()
@@ -59,8 +57,9 @@ class FileDownloader(wSClient: StandaloneWSClient)(implicit materializer: Materi
         }
         .recover {
           case NonFatal(exception) => Left(DownloadError(exception.getMessage))
-        }
-    }
+        },
+      2 minutes
+    )
 
   private implicit class ResponseOps(response: StandaloneWSResponse)(implicit materializer: Materializer) {
     def toFile(fileName: String): Future[Either[DownloadError, Unit]] =

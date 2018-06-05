@@ -40,7 +40,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(200)
 
-      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion).value.futureValue shouldBe
+      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion) shouldBe
         Left(s"Slug already exists at: $url")
     }
 
@@ -53,7 +53,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(404)
 
-      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion).value.futureValue shouldBe
+      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion) shouldBe
         Right(s"No slug created yet at $url")
     }
 
@@ -68,7 +68,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
             .expects()
             .returning(status)
 
-          slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion).value.futureValue shouldBe
+          slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion) shouldBe
             Left(s"Cannot check if slug exists at $url. Returned status $status")
         }
       }
@@ -80,7 +80,7 @@ class SlugCheckerSpec extends WordSpec with MockFactory with ScalaFutures {
         .expects()
         .returning(Future.failed(exception))
 
-      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion).value.futureValue shouldBe
+      slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion) shouldBe
         Left(s"Cannot check if slug exists at $url. Got exception: ${exception.getMessage}")
     }
   }

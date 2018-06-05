@@ -16,17 +16,13 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.data.EitherT
 import cats.implicits._
 import uk.gov.hmrc.slugbuilder.functions.AppConfigBaseFileName
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, FileDownloader, FileUrl}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
 class AppConfigBaseFetcher(fileDownloader: FileDownloader, webstoreUri: String) {
 
-  def download(repositoryName: RepositoryName): EitherT[Future, String, String] = {
+  def download(repositoryName: RepositoryName): Either[String, String] = {
 
     val fileUrl = FileUrl(s"$webstoreUri/app-config-base/$repositoryName.conf")
 

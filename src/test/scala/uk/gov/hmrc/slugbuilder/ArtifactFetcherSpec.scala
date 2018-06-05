@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.data.EitherT
-import cats.implicits._
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
@@ -27,29 +25,28 @@ import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, DownloadError, FileDownloader, FileUrl}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
 class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
 
   "download" should {
 
     "return Right if artifact can be downloaded from Artifactory successfully" in new Setup {
-      (fileDownloader.download(_: FileUrl, _: DestinationFileName))
+      (fileDownloader
+        .download(_: FileUrl, _: DestinationFileName))
         .expects(fileUrl, destinationFileName)
-        .returning(EitherT.rightT[Future, DownloadError](()))
+        .returning(Right())
 
-      artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
+      artifactFetcher.download(repositoryName, releaseVersion) shouldBe
         Right(s"Artifact successfully downloaded from $fileUrl")
     }
 
     "return Left if there was an error when downloading the artifact from Artifactory" in new Setup {
       val downloadingProblem = DownloadError("downloading problem")
-      (fileDownloader.download(_: FileUrl, _: DestinationFileName))
+      (fileDownloader
+        .download(_: FileUrl, _: DestinationFileName))
         .expects(fileUrl, destinationFileName)
-        .returning(EitherT.leftT[Future, Unit](downloadingProblem))
+        .returning(Left(downloadingProblem))
 
-      artifactFetcher.download(repositoryName, releaseVersion).value.futureValue shouldBe
+      artifactFetcher.download(repositoryName, releaseVersion) shouldBe
         Left(s"Artifact couldn't be downloaded from $fileUrl. Cause: $downloadingProblem")
     }
   }
@@ -63,7 +60,7 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
     )
     val destinationFileName = DestinationFileName(ArtifactFileName(repositoryName, releaseVersion))
 
-    val fileDownloader                        = mock[FileDownloader]
+    val fileDownloader  = mock[FileDownloader]
     val artifactFetcher = new ArtifactFetcher(fileDownloader, artifactoryUri)
   }
 }

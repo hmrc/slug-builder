@@ -16,21 +16,15 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.implicits._
-import cats.data.EitherT
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
-import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.slugbuilder.functions.AppConfigBaseFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, DownloadError, FileDownloader, FileUrl}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-class AppConfigBaseFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
+class AppConfigBaseFetcherSpec extends WordSpec with MockFactory {
 
   "download" should {
 
@@ -38,10 +32,10 @@ class AppConfigBaseFetcherSpec extends WordSpec with MockFactory with ScalaFutur
       (fileDownloader
         .download(_: FileUrl, _: DestinationFileName))
         .expects(fileUrl, destinationFileName)
-        .returning(EitherT.rightT[Future, DownloadError](()))
+        .returning(Right())
 
-      appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
-        Right(s"app-config-base successfully downloaded from $fileUrl")
+      appConfigBaseFetcher
+        .download(repositoryName) shouldBe Right(s"app-config-base successfully downloaded from $fileUrl")
     }
 
     "return Left if there was an error when downloading app-config-base from Webstore" in new Setup {
@@ -49,9 +43,9 @@ class AppConfigBaseFetcherSpec extends WordSpec with MockFactory with ScalaFutur
       (fileDownloader
         .download(_: FileUrl, _: DestinationFileName))
         .expects(fileUrl, destinationFileName)
-        .returning(EitherT.leftT[Future, Unit](downloadingProblem))
+        .returning(Left(downloadingProblem))
 
-      appConfigBaseFetcher.download(repositoryName).value.futureValue shouldBe
+      appConfigBaseFetcher.download(repositoryName) shouldBe
         Left(s"app-config-base couldn't be downloaded from $fileUrl. Cause: $downloadingProblem")
     }
   }
