@@ -56,7 +56,7 @@ class ArtifactFetcherSpec extends WordSpec with MockFactory with ScalaFutures {
     val releaseVersion = releaseVersionGen.generateOne
     val artifactoryUri = "artifactoryUri"
     val fileUrl = FileUrl(
-      s"$artifactoryUri/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
+      s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
     )
     val destinationFileName = DestinationFileName(ArtifactFileName(repositoryName, releaseVersion))
 

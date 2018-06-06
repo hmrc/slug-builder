@@ -25,7 +25,7 @@ class ArtifactFetcher(fileDownloader: FileDownloader, artifactoryUri: String) {
   def download(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
 
     val fileUrl = FileUrl(
-      s"$artifactoryUri/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
+      s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
     )
 
     fileDownloader

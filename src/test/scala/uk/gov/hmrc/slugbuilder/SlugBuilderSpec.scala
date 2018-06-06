@@ -24,13 +24,12 @@ import org.mockito.Mockito.{doNothing, doThrow, when}
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.prop.PropertyChecks
 import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
-import uk.gov.hmrc.slugbuilder.tools.{CLITools, FileUtils, TarArchiver}
+import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
 
-class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
+class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
   "create" should {
 
@@ -46,12 +45,14 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
       progressReporter.logs should contain("Artifact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
-      progressReporter.logs should contain("Successfully untarred the JDK")
+      progressReporter.logs should contain("Successfully decompressed jdk.tgz")
+      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
+      progressReporter.logs should contain(s"Slug published successfully to https://artifactory/some-slug.tgz")
 
     }
 
     "not create the slug if it already exists in the Webstore" in new Setup {
-      when(slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion))
+      when(slugUtil.verifySlugNotCreatedYet(repositoryName, releaseVersion))
         .thenReturn(Left("Slug does exist"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
@@ -87,12 +88,11 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
     }
 
     "return error message when artifact cannot be extracted" in new Setup {
-      val exception = new RuntimeException("exception message")
-      doThrow(exception).when(tarArchiver).decompress(artifactFile, slugDirectory)
+      when(tarArchiver.decompress(artifactFile, slugDirectory))
+        .thenReturn(Left("Some error"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
-      progressReporter.logs should contain(
-        s"Couldn't decompress artifact from ${artifactFile.toFile.getName}. Cause: $exception")
+      progressReporter.logs                              should contain("Some error")
     }
 
     "return error when start-docker.sh creation return left" in new Setup {
@@ -140,8 +140,32 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
         .thenReturn(Left("Error downloading JDK"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
-      progressReporter.logs should contain(
-        s"Couldn't download the JDK from ${jdkFetcher.javaDownloadUri}. Cause: Error downloading JDK")
+      progressReporter.logs                              should contain("Error downloading JDK")
+    }
+
+    "return error message when the JDK cannot be extracted" in new Setup {
+
+      when(tarArchiver.decompress(Paths.get(jdkFetcher.destinationFileName), slugDirectory.resolve(".jdk")))
+        .thenReturn(Left("Some error"))
+
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs                              should contain("Some error")
+    }
+
+    "return error message when the Slug cannot be compressed" in new Setup {
+      when(tarArchiver.compress(slugTgzFile, slugDirectory))
+        .thenReturn(Left("Some error"))
+
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs                              should contain(s"Some error")
+    }
+
+    "return error message when the Slug cannot be published" in new Setup {
+      when(slugUtil.publish(repositoryName, releaseVersion))
+        .thenReturn(Left("Some error"))
+
+      slugBuilder.create(repositoryName, releaseVersion) should be('left)
+      progressReporter.logs                              should contain(s"Some error")
     }
 
     "not catch fatal Errors" in new Setup {
@@ -154,14 +178,14 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
   }
 
   private trait Setup {
-    val repositoryName  = repositoryNameGen.generateOne
-    val releaseVersion  = releaseVersionGen.generateOne
-    val artifactFile    = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
-    val slugDirectory   = Paths.get("slug")
-    val startDockerFile = slugDirectory resolve "start-docker.sh"
-    val procFile        = slugDirectory resolve "Procfile"
-    val slugTarFile     = Paths.get(s"$repositoryName-$releaseVersion.tar")
-    val javaDownloadUri = "javaDownloadUri"
+    val repositoryName     = repositoryNameGen.generateOne
+    val releaseVersion     = releaseVersionGen.generateOne
+    val artifactFile       = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
+    val slugDirectory      = Paths.get("slug")
+    val startDockerFile    = slugDirectory resolve "start-docker.sh"
+    val procFile           = slugDirectory resolve "Procfile"
+    val slugBuilderVersion = "0.5.2"
+    val slugTgzFile        = Paths.get(s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz")
 
     val progressReporter = new ProgressReporter {
 
@@ -176,27 +200,28 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
         super.printSuccess(message)
       }
     }
-    val slugChecker              = mock[SlugChecker]
+    val slugUtil                 = mock[SlugUtil]
     val artifactFetcher          = mock[ArtifactFetcher]
     val appConfigBaseFetcher     = mock[AppConfigBaseFetcher]
     val jdkFetcher               = mock[JdkFetcher]
     val tarArchiver              = mock[TarArchiver]
     val startDockerScriptCreator = mock[StartDockerScriptCreator]
     val fileUtils                = mock[FileUtils]
-    val cliTools                 = mock[CLITools]
 
     val slugBuilder = new SlugBuilder(
       progressReporter,
-      slugChecker,
+      slugUtil,
       artifactFetcher,
       appConfigBaseFetcher,
       jdkFetcher,
       tarArchiver,
       startDockerScriptCreator,
-      fileUtils,
-      cliTools)
+      fileUtils)
 
-    when(slugChecker.verifySlugNotCreatedYet(repositoryName, releaseVersion))
+    when(slugUtil.slugArtifactFileName(repositoryName, releaseVersion))
+      .thenReturn(s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz")
+
+    when(slugUtil.verifySlugNotCreatedYet(repositoryName, releaseVersion))
       .thenReturn(Right("Slug does not exist"))
 
     when(artifactFetcher.download(repositoryName, releaseVersion))
@@ -207,7 +232,8 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
 
     doNothing().when(fileUtils).createDir(slugDirectory)
 
-    doNothing().when(tarArchiver).decompress(artifactFile, slugDirectory)
+    when(tarArchiver.decompress(artifactFile, slugDirectory))
+      .thenReturn(Right(s"Successfully decompressed $artifactFile"))
 
     when(startDockerScriptCreator.ensureStartDockerExists(slugDirectory, repositoryName))
       .thenReturn(Right(()))
@@ -223,11 +249,17 @@ class SlugBuilderSpec extends WordSpec with PropertyChecks with MockitoSugar {
     doNothing().when(fileUtils).createDir(slugDirectory.resolve(".jdk"))
 
     when(jdkFetcher.download)
-      .thenReturn(Right(s"Successfully downloaded JDK from $javaDownloadUri"))
+      .thenReturn(Right(s"Successfully downloaded the JDK"))
 
     when(jdkFetcher.destinationFileName).thenReturn("jdk.tgz")
 
-    when(cliTools.run(Array("tar", "-pxzf", "jdk.tgz", "-C", slugDirectory.resolve(".jdk").toString)))
-      .thenReturn(Right(()))
+    when(tarArchiver.decompress(Paths.get("jdk.tgz"), slugDirectory.resolve(".jdk")))
+      .thenReturn(Right("Successfully decompressed jdk.tgz"))
+
+    when(tarArchiver.compress(slugTgzFile, slugDirectory))
+      .thenReturn(Right(s"Successfully compressed $slugTgzFile"))
+
+    when(slugUtil.publish(repositoryName, releaseVersion))
+      .thenReturn(Right(s"Slug published successfully to https://artifactory/some-slug.tgz"))
   }
 }

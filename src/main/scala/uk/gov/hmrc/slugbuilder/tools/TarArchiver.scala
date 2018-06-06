@@ -16,77 +16,22 @@
 
 package uk.gov.hmrc.slugbuilder.tools
 
-import java.io.{FileInputStream, FileOutputStream}
-import java.nio.file.Files._
-import java.nio.file.{Path, Paths}
-import java.util.stream.{Stream => JavaStream}
+import java.nio.file.Path
+import cats.implicits._
 
-import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveInputStream, TarArchiveOutputStream}
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
-import org.apache.commons.compress.utils.IOUtils
+class TarArchiver(cliTools: CliTools) {
 
-import scala.collection.JavaConversions._
+  def decompress(tgzFile: Path, outputDirectory: Path, preservePermissions: Boolean = true): Either[String, String] =
+    cliTools
+      .run(Array("tar", if (preservePermissions) "-pxzf" else "-xzf", tgzFile.toString, "-C", outputDirectory.toString))
+      .bimap(error => s"Couldn't decompress $tgzFile. Cause: $error", _ => s"Successfully decompressed $tgzFile")
 
-class TarArchiver {
+  def compress(tgzFile: Path, inputDirectory: Path): Either[String, String] =
+    cliTools
+      .run(Array("tar", "--exclude='./.git'", "-C", inputDirectory.toString, "-czf", tgzFile.toString, "."))
+      .bimap(
+        error => s"Couldn't compress $inputDirectory. Cause: $error",
+        _ => s"Successfully compressed the $inputDirectory"
+      )
 
-  def decompress(tgzFile: Path, outputDirectory: Path): Unit = {
-    val inputStream = archiveInputStream(tgzFile)
-    try {
-      Stream
-        .continually(inputStream.getNextTarEntry)
-        .takeWhile(_ != null)
-        .map(entry =>
-          if (!entry.isDirectory) {
-            val currentFile = outputDirectory resolve Paths.get(entry.getName).normalize()
-            if (!exists(currentFile.getParent)) currentFile.getParent.toFile.mkdirs()
-            IOUtils.copy(inputStream, new FileOutputStream(currentFile.toFile))
-        })
-        .force
-    } finally inputStream.close()
-  }
-
-  private def archiveInputStream(tgzFile: Path) =
-    Option(new TarArchiveInputStream(new GzipCompressorInputStream(new FileInputStream(tgzFile.toFile))))
-      .getOrElse {
-        throw new RuntimeException("Tar archive reader cannot be created")
-      }
-
-  def tar(destination: Path, files: JavaStream[Path]): Unit = {
-    val outputStream = archiveOutputStream(destination)
-    try {
-      files.iterator() foreach (file => addToArchive(outputStream, file, Paths.get("")))
-    } finally outputStream.close()
-  }
-
-  private def archiveOutputStream(destination: Path) =
-    Option(new TarArchiveOutputStream(new FileOutputStream(destination.toFile)))
-      .map { tarOutputStream =>
-        // TAR has an 8 gig file limit by default, this gets around that
-        tarOutputStream.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_STAR)
-
-        // TAR originally didn't support long file names, so enable the support for it
-        tarOutputStream.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU)
-        tarOutputStream.setAddPaxHeadersForNonAsciiNames(true)
-        tarOutputStream
-      }
-      .getOrElse {
-        throw new RuntimeException("Tar archive writer cannot be created")
-      }
-
-  private def addToArchive(outputStream: TarArchiveOutputStream, file: Path, dir: Path): Unit = {
-    val entry = dir resolve file.toFile.getName
-    if (isDirectory(file)) {
-      val children = list(file).iterator()
-      for (child <- children) {
-        addToArchive(outputStream, child, entry)
-      }
-    } else {
-      outputStream.putArchiveEntry(new TarArchiveEntry(file.toFile, entry.toString))
-      try {
-        val in = new FileInputStream(file.toFile)
-        try IOUtils.copy(in, outputStream)
-        finally if (in != null) in.close()
-      } finally outputStream.closeArchiveEntry()
-    }
-  }
 }

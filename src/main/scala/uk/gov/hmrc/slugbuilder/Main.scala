@@ -20,40 +20,41 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.implicits._
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
-import uk.gov.hmrc.slugbuilder.functions.SlugArtifactFileName
-import uk.gov.hmrc.slugbuilder.tools.{CLITools, FileDownloader, FileUtils, TarArchiver}
+import uk.gov.hmrc.slugbuilder.tools.{CliTools, FileDownloader, FileUtils, TarArchiver}
 import scala.language.postfixOps
 
 object Main {
 
-  private lazy val webstoreUri        = EnvironmentVariables.webstoreUri.getOrExit
-  private lazy val slugBuilderVersion = EnvironmentVariables.slugBuilderVersion.getOrExit
-  private lazy val artifactoryUri     = EnvironmentVariables.artifactoryUri.getOrExit
-  private lazy val gitHubApiUser      = EnvironmentVariables.gitHubApiUser.getOrExit
-  private lazy val gitHubApiToken     = EnvironmentVariables.gitHubApiToken.getOrExit
-  private lazy val workspace          = EnvironmentVariables.workspace.getOrExit
-  private lazy val javaVersion        = EnvironmentVariables.javaVersion.getOrExit
-  private lazy val javaDownloadUri    = EnvironmentVariables.javaDownloadUri.getOrExit
-  private lazy val javaVendor         = EnvironmentVariables.javaVendor.getOrExit
+  private lazy val slugBuilderVersion  = EnvironmentVariables.slugBuilderVersion.getOrExit
+  private lazy val artifactoryUri      = EnvironmentVariables.artifactoryUri.getOrExit
+  private lazy val artifactoryUsername = EnvironmentVariables.artifactoryUsername.getOrExit
+  private lazy val artifactoryPassword = EnvironmentVariables.artifactoryPassword.getOrExit
+  private lazy val javaVersion         = EnvironmentVariables.javaVersion.getOrExit
+  private lazy val javaDownloadUri     = EnvironmentVariables.javaDownloadUri.getOrExit
+  private lazy val javaVendor          = EnvironmentVariables.javaVendor.getOrExit
 
   private lazy implicit val system: ActorSystem    = ActorSystem()
   private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  private lazy val progressReporter     = new ProgressReporter()
-  private lazy val httpClient           = StandaloneAhcWSClient()
-  private lazy val fileDownloader       = new FileDownloader(httpClient)
-  private lazy val slugArtifactFileName = SlugArtifactFileName(slugBuilderVersion)
+  private lazy val progressReporter = new ProgressReporter()
+  private lazy val httpClient       = StandaloneAhcWSClient()
+  private lazy val fileDownloader   = new FileDownloader(httpClient)
 
   private lazy val slugBuilder = new SlugBuilder(
     progressReporter,
-    new SlugChecker(httpClient, webstoreUri, slugArtifactFileName),
+    new SlugUtil(
+      httpClient,
+      slugBuilderVersion,
+      artifactoryUri,
+      artifactoryUsername,
+      artifactoryPassword,
+      progressReporter),
     new ArtifactFetcher(fileDownloader, artifactoryUri),
-    new AppConfigBaseFetcher(fileDownloader, webstoreUri),
+    new AppConfigBaseFetcher(fileDownloader, artifactoryUri),
     new JdkFetcher(fileDownloader, javaDownloadUri, javaVendor, javaVersion),
-    new TarArchiver(),
+    new TarArchiver(new CliTools(progressReporter)),
     new StartDockerScriptCreator(),
-    new FileUtils(),
-    new CLITools(progressReporter)
+    new FileUtils()
   )
 
   def main(args: Array[String]): Unit = {

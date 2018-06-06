@@ -25,6 +25,7 @@ lazy val slugBuilder = Project(appName, file("."))
 val compileDependencies = Seq(
   "com.github.docker-java" % "docker-java"             % "3.0.14" exclude ("org.apache.httpcomponents", "httpcore"),
   "com.typesafe.play"      %% "play-ahc-ws-standalone" % "1.1.2",
+  "com.typesafe.play"      %% "play-json"              % "2.6.7",
   "log4j"                  % "log4j"                   % "1.2.17",
   "org.apache.commons"     % "commons-compress"        % "1.16.1",
   "org.eclipse.jgit"       % "org.eclipse.jgit"        % "4.11.0.201803080745-r",

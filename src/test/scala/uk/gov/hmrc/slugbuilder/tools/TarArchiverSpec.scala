@@ -16,13 +16,9 @@
 
 package uk.gov.hmrc.slugbuilder.tools
 
-import java.io.FileOutputStream
 import java.nio.file.{Files, Path, Paths}
-import java.util.zip.GZIPOutputStream
-
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
-
 import scala.collection.JavaConversions._
 
 class TarArchiverSpec extends WordSpec {
@@ -30,24 +26,26 @@ class TarArchiverSpec extends WordSpec {
   "archiver" should {
 
     "allow to compress to tar and decompress from tgz" in new Setup {
-      val tar = Paths.get("compressed.tar")
-      archiver.tar(tar, Files.list(folder))
-
       val tgz = Paths.get("compressed.tgz")
-      compress(inputFile = tar, outputFile = tgz)
+      archiver.compress(tgz, folder)
 
       val uncompressed = Paths.get("uncompressed")
-      new TarArchiver().decompress(tgz, uncompressed)
+
+      uncompressed.toFile.mkdir()
+
+      archiver.decompress(tgz, uncompressed)
 
       verifyFolderStructureExtracted(to = uncompressed)
 
-      delete(folder, tar, tgz, uncompressed)
+      delete(folder, tgz, uncompressed)
     }
   }
 
   private trait Setup {
 
-    val archiver = new TarArchiver()
+    val progressReporter = new ProgressReporterStub()
+    val cliTools         = new CliTools(progressReporter)
+    val archiver         = new TarArchiver(cliTools)
 
     val folder = Paths.get("folder")
     folder.toFile.mkdir()
@@ -69,14 +67,6 @@ class TarArchiverSpec extends WordSpec {
         .readAllLines(to resolve subfolder.getFileName resolve subfolderFile)
         .mkString shouldBe "subfolder level"
     }
-  }
-
-  private def compress(inputFile: Path, outputFile: Path): Unit = {
-    val bos  = new FileOutputStream(outputFile.toFile)
-    val gzip = new GZIPOutputStream(bos)
-    gzip.write(Files.readAllBytes(inputFile))
-    gzip.close()
-    bos.close()
   }
 
   private def delete(files: Path*): Unit = files.foreach { file =>

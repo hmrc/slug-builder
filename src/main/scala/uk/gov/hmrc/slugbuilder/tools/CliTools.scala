@@ -24,7 +24,7 @@ import scala.concurrent.{Await, Future}
 import scala.sys.process.{Process, ProcessLogger}
 import scala.util.{Failure, Success}
 
-class CLITools(progressReporter: ProgressReporter) {
+class CliTools(progressReporter: ProgressReporter) {
 
   def run(cmd: Array[String], inDir: Option[Path] = None): Either[String, Unit] = {
     val cmdF = Future {

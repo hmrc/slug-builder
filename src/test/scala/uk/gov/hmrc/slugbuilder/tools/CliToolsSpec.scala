@@ -19,41 +19,30 @@ package uk.gov.hmrc.slugbuilder.tools
 import org.scalatest.{Matchers, WordSpec}
 import uk.gov.hmrc.slugbuilder.ProgressReporter
 
-class CLIToolsSpec extends WordSpec with Matchers {
+class CliToolsSpec extends WordSpec with Matchers {
 
   "run" should {
     "execute a commandline" in new TestSetup {
-      new CLITools(progressReporter).run(Array("echo", "Hello world")) should be('right)
+      new CliTools(progressReporter).run(Array("echo", "Hello world")) should be('right)
       progressReporter.logs                                            should contain("Hello world")
     }
 
     "return handle errors where the command is not found" in new TestSetup {
       val invalidCmd = "invalidCmd"
-      new CLITools(progressReporter).run(Array(invalidCmd)) shouldBe Left(
+      new CliTools(progressReporter).run(Array(invalidCmd)) shouldBe Left(
         s"""Cannot run program "$invalidCmd": error=2, No such file or directory""")
       progressReporter.logs shouldBe empty
     }
 
     "return the exit code and error if it fails to execute the command" in new TestSetup {
-      new CLITools(progressReporter).run(Array("ls", "some-non-existing-file")) shouldBe Left(
+      new CliTools(progressReporter).run(Array("ls", "some-non-existing-file")) shouldBe Left(
         """got exit code 1 from command 'ls some-non-existing-file'""")
       progressReporter.logs should not be empty
     }
   }
 
   trait TestSetup {
-    val progressReporter = new ProgressReporter {
 
-      var logs: List[String] = List.empty
-
-      override def printError(message: String): Unit = {
-        logs = logs :+ message
-        super.printSuccess(message)
-      }
-      override def printSuccess(message: String): Unit = {
-        logs = logs :+ message
-        super.printSuccess(message)
-      }
-    }
+    val progressReporter = new ProgressReporterStub()
   }
 }

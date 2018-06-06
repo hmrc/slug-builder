@@ -52,11 +52,11 @@ class AppConfigBaseFetcherSpec extends WordSpec with MockFactory {
 
   private trait Setup {
     val repositoryName      = repositoryNameGen.generateOne
-    val webstoreUri         = "webstoreUri"
-    val fileUrl             = FileUrl(s"$webstoreUri/app-config-base/$repositoryName.conf")
+    val artifactoryUri      = "https://artifactory"
+    val fileUrl             = FileUrl(s"$artifactoryUri/webstore/app-config-base/$repositoryName.conf")
     val destinationFileName = DestinationFileName(AppConfigBaseFileName(repositoryName))
 
     val fileDownloader       = mock[FileDownloader]
-    val appConfigBaseFetcher = new AppConfigBaseFetcher(fileDownloader, webstoreUri)
+    val appConfigBaseFetcher = new AppConfigBaseFetcher(fileDownloader, artifactoryUri)
   }
 }

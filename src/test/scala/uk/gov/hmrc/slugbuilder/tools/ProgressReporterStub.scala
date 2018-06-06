@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.slugbuilder.functions
+package uk.gov.hmrc.slugbuilder.tools
 
-import uk.gov.hmrc.slugbuilder.{ReleaseVersion, RepositoryName}
+import uk.gov.hmrc.slugbuilder.ProgressReporter
 
-object ArtifactFileName {
-  def apply(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
-    s"$repositoryName-$releaseVersion.tgz"
-}
+class ProgressReporterStub extends ProgressReporter {
+  var logs: List[String] = List.empty
 
-object AppConfigBaseFileName {
-  def apply(repositoryName: RepositoryName): String =
-    s"$repositoryName.conf"
+  override def printError(message: String): Unit = {
+    logs = logs :+ message
+    super.printSuccess(message)
+  }
+  override def printSuccess(message: String): Unit = {
+    logs = logs :+ message
+    super.printSuccess(message)
+  }
 }

@@ -21,19 +21,6 @@ import org.scalatest.WordSpec
 import org.scalatest.prop.PropertyChecks
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
-class SlugArtifactFileNameSpec extends WordSpec with PropertyChecks {
-
-  "apply" should {
-    "return a String comprised of repositoryName, releaseVersion and slugBuilderVersion" in {
-      forAll(repositoryNameGen, releaseVersionGen, nonEmptyStrings) {
-        (repositoryName, releaseVersion, slugBuilderVersion) =>
-          SlugArtifactFileName(slugBuilderVersion)
-            .apply(repositoryName, releaseVersion) shouldBe s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
-      }
-    }
-  }
-}
-
 class ArtifactFileNameSpec extends WordSpec with PropertyChecks {
 
   "apply" should {

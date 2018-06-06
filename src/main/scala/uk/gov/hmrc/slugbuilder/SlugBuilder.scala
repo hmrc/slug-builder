@@ -23,22 +23,21 @@ import java.nio.file.attribute.PosixFilePermission._
 import cats.implicits._
 import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
-import uk.gov.hmrc.slugbuilder.tools.{CLITools, FileUtils, TarArchiver}
+import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
 
 class SlugBuilder(
   progressReporter: ProgressReporter,
-  slugChecker: SlugChecker,
+  slugUtil: SlugUtil,
   artifactFetcher: ArtifactFetcher,
   appConfigBaseFetcher: AppConfigBaseFetcher,
   jdkFetcher: JdkFetcher,
   archiver: TarArchiver,
   startDockerScriptCreator: StartDockerScriptCreator,
-  fileUtils: FileUtils,
-  cliTools: CLITools) {
+  fileUtils: FileUtils) {
 
-  import progressReporter._
-  import slugChecker._
   import fileUtils._
+  import progressReporter._
+  import slugUtil._
 
   private val startDockerPermissions =
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
@@ -49,7 +48,8 @@ class SlugBuilder(
     val slugDirectory   = Paths.get("slug")
     val startDockerFile = slugDirectory resolve Paths.get("start-docker.sh")
     val procFile        = slugDirectory resolve Paths.get("Procfile")
-    val slugTarFile     = Paths.get(s"$repositoryName-$releaseVersion.tar")
+    val slugTgzFile     = Paths.get(slugUtil.slugArtifactFileName(repositoryName, releaseVersion))
+    val jdkDirectory    = slugDirectory.resolve(".jdk")
 
     for {
       _ <- verifySlugNotCreatedYet(repositoryName, releaseVersion) map printSuccess
@@ -57,23 +57,19 @@ class SlugBuilder(
       _ <- appConfigBaseFetcher.download(repositoryName) map printSuccess
       _ <- perform(createDir(slugDirectory)).leftMap(exception =>
             s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
-      _ <- perform(archiver.decompress(artifact, slugDirectory))
-            .leftMap(exception => s"Couldn't decompress artifact from $artifact. Cause: $exception")
+      _ <- archiver.decompress(artifact, slugDirectory) map printSuccess
       _ <- startDockerScriptCreator.ensureStartDockerExists(slugDirectory, repositoryName) map (_ =>
             "ensured start-docker exists")
       _ <- perform(setPermissions(startDockerFile, startDockerPermissions)).leftMap(exception =>
             s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
       _ <- perform(createFile(procFile, s"web: ./${startDockerFile.toFile.getName}", UTF_8, CREATE_NEW))
             .leftMap(exception => s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
-      _ <- perform(createDir(slugDirectory.resolve(".jdk"))).leftMap(exception =>
-            s"Couldn't create .jdk directory at $slugDirectory/.jdk. Cause: ${exception.getMessage}")
-      _ <- jdkFetcher.download
-            .bimap(
-              message => s"Couldn't download the JDK from ${jdkFetcher.javaDownloadUri}. Cause: $message",
-              _ => "Successfully downloaded the JDK") map printSuccess
-      _ <- cliTools
-            .run(Array("tar", "-pxzf", jdkFetcher.destinationFileName, "-C", slugDirectory.resolve(".jdk").toString))
-            .bimap(error => s"Couldn't untar the JDK. Cause: $error", _ => "Successfully untarred the JDK") map printSuccess
+      _ <- perform(createDir(jdkDirectory)).leftMap(exception =>
+            s"Couldn't create .jdk directory at $jdkDirectory. Cause: ${exception.getMessage}")
+      _ <- jdkFetcher.download map printSuccess
+      _ <- archiver.decompress(Paths.get(jdkFetcher.destinationFileName), jdkDirectory) map printSuccess
+      _ <- archiver.compress(slugTgzFile, slugDirectory) map printSuccess
+      _ <- slugUtil.publish(repositoryName, releaseVersion) map printSuccess
     } yield ()
   }.leftMap(printError)
 }

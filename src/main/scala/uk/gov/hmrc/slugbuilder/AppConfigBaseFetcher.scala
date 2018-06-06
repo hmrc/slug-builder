@@ -20,11 +20,11 @@ import cats.implicits._
 import uk.gov.hmrc.slugbuilder.functions.AppConfigBaseFileName
 import uk.gov.hmrc.slugbuilder.tools.{DestinationFileName, FileDownloader, FileUrl}
 
-class AppConfigBaseFetcher(fileDownloader: FileDownloader, webstoreUri: String) {
+class AppConfigBaseFetcher(fileDownloader: FileDownloader, artifactoryUri: String) {
 
   def download(repositoryName: RepositoryName): Either[String, String] = {
 
-    val fileUrl = FileUrl(s"$webstoreUri/app-config-base/$repositoryName.conf")
+    val fileUrl = FileUrl(s"$artifactoryUri/webstore/app-config-base/$repositoryName.conf")
 
     fileDownloader
       .download(fileUrl, DestinationFileName(AppConfigBaseFileName(repositoryName)))
