@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.slugbuilder.tools
+package uk.gov.hmrc.slugbuilder.connectors
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 import akka.stream.Materializer
 import akka.stream.scaladsl.FileIO
-import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws.{StandaloneWSClient, StandaloneWSResponse}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -41,7 +40,6 @@ case class DestinationFileName(value: String) {
 }
 
 case class DownloadError(message: String)
-case class UploadError(message: String)
 
 class FileDownloader(wsClient: StandaloneWSClient)(implicit materializer: Materializer) {
 
@@ -59,20 +57,6 @@ class FileDownloader(wsClient: StandaloneWSClient)(implicit materializer: Materi
         }
         .recover {
           case NonFatal(exception) => Left(DownloadError(exception.getMessage))
-        },
-      2 minutes
-    )
-
-  def upload(file: Path, destinationUrl: String): Either[UploadError, Unit] =
-    Await.result(
-      wsClient
-        .url(destinationUrl)
-        .post(file.toFile)
-        .flatMap { response =>
-          response.status match {
-            case 200 => Future.successful(Right(()))
-            case _   => Future.successful(Left(UploadError(s"Could not upload file to $destinationUrl")))
-          }
         },
       2 minutes
     )

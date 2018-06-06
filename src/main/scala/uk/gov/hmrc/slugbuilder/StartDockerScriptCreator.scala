@@ -16,15 +16,12 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.implicits._
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.{Files, OpenOption, Path, Paths}
-
-import uk.gov.hmrc.slugbuilder.functions.AppConfigBaseFileName
+import cats.implicits._
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
-
 import scala.collection.JavaConversions._
 
 class StartDockerScriptCreator(
@@ -36,7 +33,7 @@ class StartDockerScriptCreator(
 
   def ensureStartDockerExists(slugDirectory: Path, repositoryName: RepositoryName): Either[String, Unit] = {
     val startDockerFileInSlug = slugDirectory resolve Paths.get("start-docker.sh")
-    val appConfigBase         = Paths.get(AppConfigBaseFileName(repositoryName))
+    val appConfigBase         = Paths.get(AppConfigBaseFileName(repositoryName).toString)
     val confDirectory         = slugDirectory resolve "conf"
     val startDockerContent = Seq(
       "#!/bin/sh",

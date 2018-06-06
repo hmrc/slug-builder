@@ -51,3 +51,11 @@ object ReleaseVersion {
         case _                                                            => Left(s"$value is not in valid release version format ('NNN.NNN.NNN')")
       }
 }
+
+case class ArtifactFileName(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) {
+  override def toString: String = s"$repositoryName-$releaseVersion.tgz"
+}
+
+case class AppConfigBaseFileName(repositoryName: RepositoryName) {
+  override def toString: String = s"$repositoryName.conf"
+}

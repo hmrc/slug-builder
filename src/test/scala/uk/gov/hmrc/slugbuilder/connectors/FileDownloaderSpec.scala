@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.slugbuilder.tools
+package uk.gov.hmrc.slugbuilder.connectors
 
 import java.nio.file.{Files, Paths}
 import akka.actor.ActorSystem

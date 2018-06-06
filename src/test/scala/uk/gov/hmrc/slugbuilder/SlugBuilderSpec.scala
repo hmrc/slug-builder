@@ -24,7 +24,7 @@ import org.mockito.Mockito.{doNothing, doThrow, when}
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.mockito.MockitoSugar
-import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
+import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
@@ -52,7 +52,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     }
 
     "not create the slug if it already exists in the Webstore" in new Setup {
-      when(slugUtil.verifySlugNotCreatedYet(repositoryName, releaseVersion))
+      when(artifactConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
         .thenReturn(Left("Slug does exist"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
@@ -61,7 +61,9 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
     "not create the slug if there is no artifact in the Artifactory" in new Setup {
 
-      when(artifactFetcher.download(repositoryName, releaseVersion))
+      when(
+        artifactConnector
+          .downloadArtifact(repositoryName, releaseVersion))
         .thenReturn(Left("Artifact does not exist"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
@@ -70,7 +72,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
     "not create the slug if there is app-config-base in the Webstore" in new Setup {
 
-      when(appConfigBaseFetcher.download(repositoryName))
+      when(artifactConnector.downloadAppConfigBase(repositoryName))
         .thenReturn(Left("app-config-base does not exist"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
@@ -136,7 +138,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     }
 
     "return error if downloading the JDK fails" in new Setup {
-      when(jdkFetcher.download)
+      when(artifactConnector.downloadJdk(jdkFileName))
         .thenReturn(Left("Error downloading JDK"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
@@ -145,7 +147,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
     "return error message when the JDK cannot be extracted" in new Setup {
 
-      when(tarArchiver.decompress(Paths.get(jdkFetcher.destinationFileName), slugDirectory.resolve(".jdk")))
+      when(tarArchiver.decompress(Paths.get(jdkFileName), slugDirectory.resolve(".jdk")))
         .thenReturn(Left("Some error"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
@@ -161,7 +163,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     }
 
     "return error message when the Slug cannot be published" in new Setup {
-      when(slugUtil.publish(repositoryName, releaseVersion))
+      when(artifactConnector.publish(repositoryName, releaseVersion))
         .thenReturn(Left("Some error"))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
@@ -180,7 +182,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
   private trait Setup {
     val repositoryName     = repositoryNameGen.generateOne
     val releaseVersion     = releaseVersionGen.generateOne
-    val artifactFile       = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
+    val artifactFile       = Paths.get(ArtifactFileName(repositoryName, releaseVersion).toString)
     val slugDirectory      = Paths.get("slug")
     val startDockerFile    = slugDirectory resolve "start-docker.sh"
     val procFile           = slugDirectory resolve "Procfile"
@@ -200,34 +202,28 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         super.printSuccess(message)
       }
     }
-    val slugUtil                 = mock[SlugUtil]
-    val artifactFetcher          = mock[ArtifactFetcher]
-    val appConfigBaseFetcher     = mock[AppConfigBaseFetcher]
-    val jdkFetcher               = mock[JdkFetcher]
+    val artifactConnector        = mock[ArtifactoryConnector]
     val tarArchiver              = mock[TarArchiver]
     val startDockerScriptCreator = mock[StartDockerScriptCreator]
     val fileUtils                = mock[FileUtils]
 
-    val slugBuilder = new SlugBuilder(
-      progressReporter,
-      slugUtil,
-      artifactFetcher,
-      appConfigBaseFetcher,
-      jdkFetcher,
-      tarArchiver,
-      startDockerScriptCreator,
-      fileUtils)
+    val jdkFileName = "jdk.tgz"
 
-    when(slugUtil.slugArtifactFileName(repositoryName, releaseVersion))
+    val slugBuilder =
+      new SlugBuilder(progressReporter, artifactConnector, tarArchiver, startDockerScriptCreator, fileUtils)
+
+    when(artifactConnector.slugArtifactFileName(repositoryName, releaseVersion))
       .thenReturn(s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz")
 
-    when(slugUtil.verifySlugNotCreatedYet(repositoryName, releaseVersion))
+    when(artifactConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
       .thenReturn(Right("Slug does not exist"))
 
-    when(artifactFetcher.download(repositoryName, releaseVersion))
+    when(
+      artifactConnector
+        .downloadArtifact(repositoryName, releaseVersion))
       .thenReturn(Right("Artifact downloaded"))
 
-    when(appConfigBaseFetcher.download(repositoryName))
+    when(artifactConnector.downloadAppConfigBase(repositoryName))
       .thenReturn(Right("app-config-base downloaded"))
 
     doNothing().when(fileUtils).createDir(slugDirectory)
@@ -248,10 +244,8 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
     doNothing().when(fileUtils).createDir(slugDirectory.resolve(".jdk"))
 
-    when(jdkFetcher.download)
+    when(artifactConnector.downloadJdk(jdkFileName))
       .thenReturn(Right(s"Successfully downloaded the JDK"))
-
-    when(jdkFetcher.destinationFileName).thenReturn("jdk.tgz")
 
     when(tarArchiver.decompress(Paths.get("jdk.tgz"), slugDirectory.resolve(".jdk")))
       .thenReturn(Right("Successfully decompressed jdk.tgz"))
@@ -259,7 +253,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     when(tarArchiver.compress(slugTgzFile, slugDirectory))
       .thenReturn(Right(s"Successfully compressed $slugTgzFile"))
 
-    when(slugUtil.publish(repositoryName, releaseVersion))
+    when(artifactConnector.publish(repositoryName, releaseVersion))
       .thenReturn(Right(s"Slug published successfully to https://artifactory/some-slug.tgz"))
   }
 }

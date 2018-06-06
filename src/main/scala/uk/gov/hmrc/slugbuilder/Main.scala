@@ -20,7 +20,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.implicits._
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
-import uk.gov.hmrc.slugbuilder.tools.{CliTools, FileDownloader, FileUtils, TarArchiver}
+import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, FileDownloader}
+import uk.gov.hmrc.slugbuilder.tools.{CliTools, FileUtils, TarArchiver}
 import scala.language.postfixOps
 
 object Main {
@@ -29,9 +30,7 @@ object Main {
   private lazy val artifactoryUri      = EnvironmentVariables.artifactoryUri.getOrExit
   private lazy val artifactoryUsername = EnvironmentVariables.artifactoryUsername.getOrExit
   private lazy val artifactoryPassword = EnvironmentVariables.artifactoryPassword.getOrExit
-  private lazy val javaVersion         = EnvironmentVariables.javaVersion.getOrExit
-  private lazy val javaDownloadUri     = EnvironmentVariables.javaDownloadUri.getOrExit
-  private lazy val javaVendor          = EnvironmentVariables.javaVendor.getOrExit
+  private lazy val jdkFileName         = EnvironmentVariables.jdkFileName.getOrExit
 
   private lazy implicit val system: ActorSystem    = ActorSystem()
   private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -42,16 +41,15 @@ object Main {
 
   private lazy val slugBuilder = new SlugBuilder(
     progressReporter,
-    new SlugUtil(
+    new ArtifactoryConnector(
       httpClient,
+      fileDownloader,
       slugBuilderVersion,
       artifactoryUri,
       artifactoryUsername,
       artifactoryPassword,
+      jdkFileName,
       progressReporter),
-    new ArtifactFetcher(fileDownloader, artifactoryUri),
-    new AppConfigBaseFetcher(fileDownloader, artifactoryUri),
-    new JdkFetcher(fileDownloader, javaDownloadUri, javaVendor, javaVersion),
     new TarArchiver(new CliTools(progressReporter)),
     new StartDockerScriptCreator(),
     new FileUtils()

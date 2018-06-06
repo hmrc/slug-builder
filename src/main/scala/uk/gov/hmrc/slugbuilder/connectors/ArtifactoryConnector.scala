@@ -14,24 +14,64 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.slugbuilder
-
+package uk.gov.hmrc.slugbuilder.connectors
 import java.nio.file.Paths
+import cats.implicits._
 import play.api.libs.json.Json
+import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
+import uk.gov.hmrc.slugbuilder._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
-import play.api.libs.ws.DefaultBodyWritables._
 
-class SlugUtil(
+class ArtifactoryConnector(
   wsClient: StandaloneWSClient,
+  fileDownloader: FileDownloader,
   slugBuilderVersion: String,
   artifactoryUri: String,
   artifactoryUsername: String,
   artifactoryPassword: String,
+  jdkFileName: String,
   progressReporter: ProgressReporter) {
+
+  def downloadAppConfigBase(repositoryName: RepositoryName): Either[String, String] = {
+
+    val fileUrl = FileUrl(s"$artifactoryUri/webstore/app-config-base/$repositoryName.conf")
+
+    fileDownloader
+      .download(fileUrl, DestinationFileName(AppConfigBaseFileName(repositoryName).toString))
+      .bimap(
+        downloadError => s"app-config-base couldn't be downloaded from $fileUrl. Cause: $downloadError",
+        _ => s"app-config-base successfully downloaded from $fileUrl"
+      )
+  }
+
+  def downloadJdk(targetFile: String): Either[String, String] = {
+
+    val javaDownloadUri = FileUrl(s"$artifactoryUri/webstore/java/$jdkFileName")
+    fileDownloader
+      .download(javaDownloadUri, DestinationFileName(targetFile))
+      .bimap(
+        downloadError => s"JDK couldn't be downloaded from $javaDownloadUri. Cause: $downloadError",
+        _ => s"Successfully downloaded JDK from $javaDownloadUri"
+      )
+  }
+
+  def downloadArtifact(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
+
+    val fileUrl = FileUrl(
+      s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
+    )
+
+    fileDownloader
+      .download(fileUrl, DestinationFileName(ArtifactFileName(repositoryName, releaseVersion).toString))
+      .bimap(
+        downloadError => s"Artifact couldn't be downloaded from $fileUrl. Cause: $downloadError",
+        _ => s"Artifact successfully downloaded from $fileUrl"
+      )
+  }
 
   def slugUrl(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
     s"$artifactoryUri/webstore/slugs/$repositoryName/${slugArtifactFileName(repositoryName, releaseVersion)}"

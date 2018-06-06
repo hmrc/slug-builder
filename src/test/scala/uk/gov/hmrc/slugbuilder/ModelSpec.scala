@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.slugbuilder.functions
+package uk.gov.hmrc.slugbuilder
 
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.prop.PropertyChecks
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
-class ArtifactFileNameSpec extends WordSpec with PropertyChecks {
+class ModelSpec extends WordSpec with PropertyChecks {
 
   "apply" should {
     "return a String comprised of repositoryName and releaseVersion" in {
       forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
-        ArtifactFileName(repositoryName, releaseVersion) shouldBe s"$repositoryName-$releaseVersion.tgz"
+        ArtifactFileName(repositoryName, releaseVersion).toString shouldBe s"$repositoryName-$releaseVersion.tgz"
       }
     }
   }
@@ -37,7 +37,7 @@ class AppConfigBaseFileNameSpec extends WordSpec with PropertyChecks {
   "apply" should {
     "return a String comprised of repositoryName" in {
       forAll(repositoryNameGen) { repositoryName =>
-        AppConfigBaseFileName(repositoryName) shouldBe s"$repositoryName.conf"
+        AppConfigBaseFileName(repositoryName).toString shouldBe s"$repositoryName.conf"
       }
     }
   }

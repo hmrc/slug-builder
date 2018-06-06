@@ -21,43 +21,41 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission._
 import cats.implicits._
-import uk.gov.hmrc.slugbuilder.functions.ArtifactFileName
+import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
 
 class SlugBuilder(
   progressReporter: ProgressReporter,
-  slugUtil: SlugUtil,
-  artifactFetcher: ArtifactFetcher,
-  appConfigBaseFetcher: AppConfigBaseFetcher,
-  jdkFetcher: JdkFetcher,
+  artifactoryConnector: ArtifactoryConnector,
   archiver: TarArchiver,
   startDockerScriptCreator: StartDockerScriptCreator,
   fileUtils: FileUtils) {
 
+  import artifactoryConnector._
   import fileUtils._
   import progressReporter._
-  import slugUtil._
 
   private val startDockerPermissions =
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
   def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[Unit, Unit] = {
 
-    val artifact        = Paths.get(ArtifactFileName(repositoryName, releaseVersion))
+    val artifact        = ArtifactFileName(repositoryName, releaseVersion)
+    val jdk             = Paths.get("jdk.tgz")
     val slugDirectory   = Paths.get("slug")
     val startDockerFile = slugDirectory resolve Paths.get("start-docker.sh")
     val procFile        = slugDirectory resolve Paths.get("Procfile")
-    val slugTgzFile     = Paths.get(slugUtil.slugArtifactFileName(repositoryName, releaseVersion))
+    val slugTgzFile     = Paths.get(artifactoryConnector.slugArtifactFileName(repositoryName, releaseVersion))
     val jdkDirectory    = slugDirectory.resolve(".jdk")
 
     for {
       _ <- verifySlugNotCreatedYet(repositoryName, releaseVersion) map printSuccess
-      _ <- artifactFetcher.download(repositoryName, releaseVersion) map printSuccess
-      _ <- appConfigBaseFetcher.download(repositoryName) map printSuccess
+      _ <- downloadArtifact(repositoryName, releaseVersion) map printSuccess
+      _ <- downloadAppConfigBase(repositoryName) map printSuccess
       _ <- perform(createDir(slugDirectory)).leftMap(exception =>
             s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
-      _ <- archiver.decompress(artifact, slugDirectory) map printSuccess
+      _ <- archiver.decompress(Paths.get(artifact.toString), slugDirectory) map printSuccess
       _ <- startDockerScriptCreator.ensureStartDockerExists(slugDirectory, repositoryName) map (_ =>
             "ensured start-docker exists")
       _ <- perform(setPermissions(startDockerFile, startDockerPermissions)).leftMap(exception =>
@@ -66,10 +64,10 @@ class SlugBuilder(
             .leftMap(exception => s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
       _ <- perform(createDir(jdkDirectory)).leftMap(exception =>
             s"Couldn't create .jdk directory at $jdkDirectory. Cause: ${exception.getMessage}")
-      _ <- jdkFetcher.download map printSuccess
-      _ <- archiver.decompress(Paths.get(jdkFetcher.destinationFileName), jdkDirectory) map printSuccess
+      _ <- downloadJdk(jdk.toString) map printSuccess
+      _ <- archiver.decompress(jdk, jdkDirectory) map printSuccess
       _ <- archiver.compress(slugTgzFile, slugDirectory) map printSuccess
-      _ <- slugUtil.publish(repositoryName, releaseVersion) map printSuccess
+      _ <- artifactoryConnector.publish(repositoryName, releaseVersion) map printSuccess
     } yield ()
   }.leftMap(printError)
 }
