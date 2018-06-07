@@ -17,7 +17,6 @@
 package uk.gov.hmrc.slugbuilder.tools
 
 import org.scalatest.{Matchers, WordSpec}
-import uk.gov.hmrc.slugbuilder.ProgressReporter
 
 class CliToolsSpec extends WordSpec with Matchers {
 
@@ -29,15 +28,13 @@ class CliToolsSpec extends WordSpec with Matchers {
 
     "return handle errors where the command is not found" in new TestSetup {
       val invalidCmd = "invalidCmd"
-      new CliTools(progressReporter).run(Array(invalidCmd)) shouldBe Left(
-        s"""Cannot run program "$invalidCmd": error=2, No such file or directory""")
-      progressReporter.logs shouldBe empty
+      new CliTools(progressReporter).run(Array(invalidCmd)) should be('left)
+      progressReporter.logs                                 shouldBe empty
     }
 
     "return the exit code and error if it fails to execute the command" in new TestSetup {
-      new CliTools(progressReporter).run(Array("ls", "some-non-existing-file")) shouldBe Left(
-        """got exit code 1 from command 'ls some-non-existing-file'""")
-      progressReporter.logs should not be empty
+      new CliTools(progressReporter).run(Array("ls", "some-non-existing-file")) should be('left)
+      progressReporter.logs                                                     should not be empty
     }
   }
 
