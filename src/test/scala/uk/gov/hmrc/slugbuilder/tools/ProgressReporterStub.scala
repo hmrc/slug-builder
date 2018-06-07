@@ -14,8 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.slugbuilder
+package uk.gov.hmrc.slugbuilder.tools
 
-class ArtifactChecker {
-  def checkIfExists(repositoryName: RepositoryName, version: ReleaseVersion): Either[String, String] = ???
+import uk.gov.hmrc.slugbuilder.ProgressReporter
+
+class ProgressReporterStub extends ProgressReporter {
+  var logs: List[String] = List.empty
+
+  override def printError(message: String): Unit = {
+    logs = logs :+ message
+    super.printSuccess(message)
+  }
+  override def printSuccess(message: String): Unit = {
+    logs = logs :+ message
+    super.printSuccess(message)
+  }
 }

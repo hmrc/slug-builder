@@ -3,7 +3,29 @@
 
  [ ![Download](https://api.bintray.com/packages/hmrc/releases/slug-builder/images/download.svg) ](https://bintray.com/hmrc/releases/slug-builder/_latestVersion)
 
-This is a placeholder README.md for a new repository
+This is a tool to be used in command line to create and publish *slug* artifacts for a given microservice.
+
+# How to create an executable fat jar?
+
+`sbt assembly`
+
+# How to create and publish a slug?
+
+In order to make the tool working, following variables have to set in the running environment: 
+* JAVA_VERSION
+* ARTIFACTORY_URI
+* WEBSTORE_URI
+* SLUG_BUILDER_VERSION
+* GITHUB_API_USER
+* GITHUB_API_TOKEN
+
+Once the variables are set and a fat jar is created, slug can be built by issuing a command:
+
+`java -jar path-to-slug-builder-fat-jar repo-name x.x.x`
+
+# Publishing a fat jar
+
+At the moment the assembly task is not executed on `publish` or `publish-local` and it's not recommended to publish fat jars (more on that [here](https://github.com/sbt/sbt-assembly#publishing-not-recommended)). However, this can be changed as described in the *sbt-assembly* documentation.
 
 ### License
 

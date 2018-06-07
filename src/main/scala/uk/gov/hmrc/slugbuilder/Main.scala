@@ -16,8 +16,76 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import cats.implicits._
+import play.api.libs.ws.ahc.StandaloneAhcWSClient
+import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, FileDownloader}
+import uk.gov.hmrc.slugbuilder.tools.{CliTools, FileUtils, TarArchiver}
+import scala.language.postfixOps
+
 object Main {
-  def main(args: Array[String]): Unit =
-    new SlugBuilder(new SlugChecker(), new ArtifactChecker(), new ProgressReporter())
-      .create(args(0), args(1))
+
+  private lazy val slugBuilderVersion  = EnvironmentVariables.slugBuilderVersion.getOrExit
+  private lazy val artifactoryUri      = EnvironmentVariables.artifactoryUri.getOrExit
+  private lazy val artifactoryUsername = EnvironmentVariables.artifactoryUsername.getOrExit
+  private lazy val artifactoryPassword = EnvironmentVariables.artifactoryPassword.getOrExit
+  private lazy val jdkFileName         = EnvironmentVariables.jdkFileName.getOrExit
+
+  private lazy implicit val system: ActorSystem    = ActorSystem()
+  private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
+
+  private lazy val progressReporter = new ProgressReporter()
+  private lazy val httpClient       = StandaloneAhcWSClient()
+  private lazy val fileDownloader   = new FileDownloader(httpClient)
+
+  private lazy val slugBuilder = new SlugBuilder(
+    progressReporter,
+    new ArtifactoryConnector(
+      httpClient,
+      fileDownloader,
+      slugBuilderVersion,
+      artifactoryUri,
+      artifactoryUsername,
+      artifactoryPassword,
+      jdkFileName,
+      progressReporter),
+    new TarArchiver(new CliTools(progressReporter)),
+    new StartDockerScriptCreator(),
+    new FileUtils()
+  )
+
+  def main(args: Array[String]): Unit = {
+
+    val repositoryName = args.get("Repository name", atIdx = 0).flatMap(RepositoryName.create).getOrExit
+    val releaseVersion = args.get("Release version", atIdx = 1).flatMap(ReleaseVersion.create).getOrExit
+
+    slugBuilder
+      .create(repositoryName, releaseVersion)
+      .fold(
+        _ => sys.exit(1),
+        _ => sys.exit(0)
+      )
+  }
+
+  private implicit class ArgsOps(args: Array[String]) {
+
+    def get(argName: String, atIdx: Int): Either[String, String] =
+      if (atIdx >= args.length) {
+        Left(s"'$argName' required as argument ${atIdx + 1}.")
+      } else
+        Right(args(atIdx))
+  }
+
+  private implicit class EitherOps[T](either: Either[String, T]) {
+
+    lazy val getOrExit: T =
+      either.fold(
+        error => {
+          progressReporter.printError(error)
+          sys.exit(1)
+        },
+        identity
+      )
+  }
 }

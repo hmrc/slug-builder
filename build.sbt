@@ -1,5 +1,6 @@
+import sbt.Keys._
 import sbt._
-import uk.gov.hmrc.DefaultBuildSettings.{defaultSettings, scalaSettings}
+import uk.gov.hmrc.DefaultBuildSettings._
 import uk.gov.hmrc.SbtArtifactory
 import uk.gov.hmrc.versioning.SbtGitVersioning
 import uk.gov.hmrc.versioning.SbtGitVersioning.majorVersion
@@ -12,22 +13,52 @@ lazy val slugBuilder = Project(appName, file("."))
   .settings(defaultSettings(): _*)
   .settings(
     majorVersion := 0,
-    scalaVersion := "2.11.11",
-    libraryDependencies ++= compile ++ test,
+    scalaVersion := "2.11.12",
+    libraryDependencies ++= compileDependencies ++ testDependencies,
     retrieveManaged := true,
+    assemblySettings,
     evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
     resolvers += Resolver.bintrayRepo("hmrc", "releases"),
     resolvers += Resolver.jcenterRepo
   )
 
-val compile = Seq(
-  "org.typelevel"     %% "cats-core" % "1.0.1",
-  "com.typesafe.play" %% "play-ws"   % "2.5.12"
+val compileDependencies = Seq(
+  "com.github.docker-java" % "docker-java"             % "3.0.14" exclude ("org.apache.httpcomponents", "httpcore"),
+  "com.typesafe.play"      %% "play-ahc-ws-standalone" % "1.1.2",
+  "com.typesafe.play"      %% "play-json"              % "2.6.7",
+  "log4j"                  % "log4j"                   % "1.2.17",
+  "org.apache.commons"     % "commons-compress"        % "1.16.1",
+  "org.eclipse.jgit"       % "org.eclipse.jgit"        % "4.11.0.201803080745-r",
+  "org.slf4j"              % "slf4j-api"               % "1.7.25",
+  "org.slf4j"              % "slf4j-log4j12"           % "1.7.25",
+  "org.typelevel"          %% "cats-core"              % "1.0.1"
 )
 
-val test = Seq(
-  "org.scalatest"  %% "scalatest"  % "3.0.5"  % Test,
-  "org.scalacheck" %% "scalacheck" % "1.14.0" % Test,
-  "org.pegdown"    % "pegdown"     % "1.4.2"  % Test,
-  "org.scalamock"  %% "scalamock"  % "4.1.0"  % Test
+val testDependencies = Seq(
+  "org.mockito"    % "mockito-core" % "2.18.3" % Test,
+  "org.pegdown"    % "pegdown"      % "1.6.0"  % Test,
+  "org.scalacheck" %% "scalacheck"  % "1.14.0" % Test,
+  "org.scalamock"  %% "scalamock"   % "4.1.0"  % Test,
+  "org.scalatest"  %% "scalatest"   % "3.0.5"  % Test
+)
+
+val assemblySettings = Seq(
+  test in assembly := {},
+  assemblyMergeStrategy in assembly := {
+    case PathList("META-INF", xs @ _*)                                                           => MergeStrategy.discard
+    case PathList("org", "apache", "commons", "logging", xs @ _*)                                => MergeStrategy.first
+    case PathList("play", "core", "server", xs @ _*)                                             => MergeStrategy.first
+    case PathList("javax", "inject", xs @ _*)                                                    => MergeStrategy.first
+    case PathList("io", "netty", "netty-codec-http", xs @ _*)                                    => MergeStrategy.first
+    case PathList("org", "apache", "http", "impl", "io", "ChunkedInputStream.class")             => MergeStrategy.first
+    case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl$AFUNIXInputStream.class")  => MergeStrategy.first
+    case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl$AFUNIXOutputStream.class") => MergeStrategy.first
+    case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl$Lenient.class")            => MergeStrategy.first
+    case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl.class")                    => MergeStrategy.first
+    case x                                                                                       => (assemblyMergeStrategy in assembly).value(x)
+  },
+  artifact in (Compile, assembly) := {
+    val art = (artifact in (Compile, assembly)).value
+    art.copy(`classifier` = Some("assembly"))
+  }
 )

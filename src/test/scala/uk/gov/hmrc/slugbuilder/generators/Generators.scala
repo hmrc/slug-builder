@@ -17,6 +17,7 @@
 package uk.gov.hmrc.slugbuilder.generators
 
 import org.scalacheck.Gen
+import uk.gov.hmrc.slugbuilder.{ReleaseVersion, RepositoryName}
 
 object Generators {
 
@@ -39,4 +40,11 @@ object Generators {
     minorVersion <- Gen.chooseNum(0, 100)
     patchVersion <- Gen.chooseNum(0, 100)
   } yield s"$majorVersion.$minorVersion.$patchVersion"
+
+  val repositoryNameGen: Gen[RepositoryName] = nonEmptyStrings.map(RepositoryName.apply)
+  val releaseVersionGen: Gen[ReleaseVersion] = releaseVersions.map(ReleaseVersion.apply)
+
+  val allHttpStatusCodes: Seq[Int] = (200 to 208) ++: (300 to 308) ++: (400 to 431) ++: (500 to 511)
+
+  def httpStatusCodes(excluding: Int*): Gen[Int] = Gen.oneOf(allHttpStatusCodes filterNot excluding.contains)
 }

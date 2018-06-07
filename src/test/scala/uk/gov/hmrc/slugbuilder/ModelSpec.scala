@@ -16,29 +16,28 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.implicits._
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.prop.PropertyChecks
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
-class ReleaseVersionSpec extends WordSpec with PropertyChecks {
+class ModelSpec extends WordSpec with PropertyChecks {
 
-  "ReleaseVersion" should {
-
-    "instantiate an object if version is in the 'NNN.NNN.NNN' format" in {
-      forAll(releaseVersions) { releaseVersion =>
-        ReleaseVersion.create(releaseVersion).map(_.toString) shouldBe Right(releaseVersion)
+  "apply" should {
+    "return a String comprised of repositoryName and releaseVersion" in {
+      forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
+        ArtifactFileName(repositoryName, releaseVersion).toString shouldBe s"$repositoryName-$releaseVersion.tgz"
       }
     }
+  }
+}
 
-    "return an error if release version is blank" in {
-      ReleaseVersion.create(" ") shouldBe Left("Blank release version not allowed")
-    }
+class AppConfigBaseFileNameSpec extends WordSpec with PropertyChecks {
 
-    "unknown.format" +: "1.a.0" +: "a.b.c" +: "1.2.3." +: "1.2.3a" +: Nil foreach { version =>
-      s"throw an exception if '$version' version which is not in the 'NNN.NNN.NNN' format" in {
-        ReleaseVersion.create(version) shouldBe Left(s"$version is not in valid release version format ('NNN.NNN.NNN')")
+  "apply" should {
+    "return a String comprised of repositoryName" in {
+      forAll(repositoryNameGen) { repositoryName =>
+        AppConfigBaseFileName(repositoryName).toString shouldBe s"$repositoryName.conf"
       }
     }
   }

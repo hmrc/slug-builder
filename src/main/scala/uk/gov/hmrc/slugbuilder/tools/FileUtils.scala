@@ -14,11 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.slugbuilder
+package uk.gov.hmrc.slugbuilder.tools
 
-class ProgressReporter {
+import java.nio.charset.Charset
+import java.nio.file.{Files, OpenOption, Path}
+import java.nio.file.attribute.PosixFilePermission
 
-  def printError(message: String): Unit = Console.err.println(message)
+import scala.collection.JavaConversions._
 
-  def printSuccess(message: String): Unit = Console.out.println(message)
+class FileUtils {
+  def createDir(dir: Path): Unit = if (Files.exists(dir)) () else dir.toFile.mkdir()
+
+  def setPermissions(file: Path, permissions: Set[PosixFilePermission]): Unit =
+    Files.setPosixFilePermissions(file, permissions)
+
+  def createFile(file: Path, content: String, charset: Charset, openOption: OpenOption): Unit =
+    Files.write(file, Seq(content), charset, openOption)
 }

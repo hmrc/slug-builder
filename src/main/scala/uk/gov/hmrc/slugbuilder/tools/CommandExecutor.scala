@@ -14,8 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.slugbuilder
+package uk.gov.hmrc.slugbuilder.tools
 
-class SlugChecker {
-  def checkIfDoesNotExist(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = ???
+import cats.implicits._
+
+import scala.util.Try
+import scala.util.control.NonFatal
+
+object CommandExecutor {
+
+  def perform[T](operation: => T): Either[Throwable, T] =
+    Either
+      .fromTry {
+        Try(operation)
+      }
+      .leftMap {
+        case NonFatal(exception) => exception
+      }
+
 }

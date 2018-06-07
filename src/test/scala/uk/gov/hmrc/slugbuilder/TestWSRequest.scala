@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.slugbuilder
 
-class ProgressReporter {
+import play.api.libs.ws.{StandaloneWSRequest, StandaloneWSResponse}
 
-  def printError(message: String): Unit = Console.err.println(message)
-
-  def printSuccess(message: String): Unit = Console.out.println(message)
+private trait TestWSRequest extends StandaloneWSRequest {
+  override type Self     = TestWSRequest
+  override type Response = StandaloneWSResponse
 }
