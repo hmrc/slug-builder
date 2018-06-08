@@ -1,5 +1,5 @@
 import sbt.Keys._
-import sbt._
+import sbt.{addArtifact, _}
 import uk.gov.hmrc.DefaultBuildSettings._
 import uk.gov.hmrc.SbtArtifactory
 import uk.gov.hmrc.versioning.SbtGitVersioning
@@ -62,3 +62,6 @@ val assemblySettings = Seq(
     art.copy(`classifier` = Some("assembly"))
   }
 )
+
+addArtifact(artifact in (Compile, assembly), assembly)
+
