@@ -183,9 +183,9 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(wsRequest)
 
       val publishUrl =
-        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
-      val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz")
+      val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
       Files.write(fileToUpload, "some content".getBytes())
 
       (wsRequest
@@ -215,9 +215,9 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(wsRequest)
 
       val publishUrl =
-        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
-      val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz")
+      val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
       Files.write(fileToUpload, "some content".getBytes())
 
       (wsRequest
@@ -257,13 +257,13 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     val artifactoryUri       = "https://artifactory"
     val artifactoryUsername  = "username"
     val artifactoryPassword  = "password"
-    val slugBuilderVersion   = nonEmptyStrings.generateOne
+    val slugRunnerVersion    = nonEmptyStrings.generateOne
     val artifactName         = nonEmptyStrings.generateOne
     val wsClient             = mock[StandaloneWSClient]
     val repositoryName       = repositoryNameGen.generateOne
     val releaseVersion       = releaseVersionGen.generateOne
     val jdkFileName          = "jdk.tgz"
-    val slugArtifactFilename = s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+    val slugArtifactFilename = s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
     val progressReporter = new ProgressReporterStub
 
@@ -271,7 +271,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     val connector = new ArtifactoryConnector(
       wsClient,
       fileDownloader,
-      slugBuilderVersion,
+      slugRunnerVersion,
       artifactoryUri,
       artifactoryUsername,
       artifactoryPassword,

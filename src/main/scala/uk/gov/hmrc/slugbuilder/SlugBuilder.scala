@@ -39,7 +39,7 @@ class SlugBuilder(
   private val startDockerPermissions =
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
-  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[Unit, Unit] = {
+  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) = {
 
     val artifact        = ArtifactFileName(repositoryName, releaseVersion)
     val jdk             = Paths.get("jdk.tgz")

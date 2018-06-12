@@ -29,7 +29,7 @@ import scala.util.control.NonFatal
 class ArtifactoryConnector(
   wsClient: StandaloneWSClient,
   fileDownloader: FileDownloader,
-  slugBuilderVersion: String,
+  slugRunnerVersion: String,
   artifactoryUri: String,
   artifactoryUsername: String,
   artifactoryPassword: String,
@@ -77,7 +77,7 @@ class ArtifactoryConnector(
     s"$artifactoryUri/webstore/slugs/$repositoryName/${slugArtifactFileName(repositoryName, releaseVersion)}"
 
   def slugArtifactFileName(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
-    s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz"
+    s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
   def verifySlugNotCreatedYet(
     repositoryName: RepositoryName,

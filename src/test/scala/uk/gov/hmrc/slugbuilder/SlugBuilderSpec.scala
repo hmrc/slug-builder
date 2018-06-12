@@ -180,14 +180,14 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
   }
 
   private trait Setup {
-    val repositoryName     = repositoryNameGen.generateOne
-    val releaseVersion     = releaseVersionGen.generateOne
-    val artifactFile       = Paths.get(ArtifactFileName(repositoryName, releaseVersion).toString)
-    val slugDirectory      = Paths.get("slug")
-    val startDockerFile    = slugDirectory resolve "start-docker.sh"
-    val procFile           = slugDirectory resolve "Procfile"
-    val slugBuilderVersion = "0.5.2"
-    val slugTgzFile        = Paths.get(s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz")
+    val repositoryName    = repositoryNameGen.generateOne
+    val releaseVersion    = releaseVersionGen.generateOne
+    val artifactFile      = Paths.get(ArtifactFileName(repositoryName, releaseVersion).toString)
+    val slugDirectory     = Paths.get("slug")
+    val startDockerFile   = slugDirectory resolve "start-docker.sh"
+    val procFile          = slugDirectory resolve "Procfile"
+    val slugRunnerVersion = "0.5.2"
+    val slugTgzFile       = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
 
     val progressReporter = new ProgressReporter {
 
@@ -213,7 +213,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       new SlugBuilder(progressReporter, artifactConnector, tarArchiver, startDockerScriptCreator, fileUtils)
 
     when(artifactConnector.slugArtifactFileName(repositoryName, releaseVersion))
-      .thenReturn(s"${repositoryName}_${releaseVersion}_$slugBuilderVersion.tgz")
+      .thenReturn(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
 
     when(artifactConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
       .thenReturn(Right("Slug does not exist"))

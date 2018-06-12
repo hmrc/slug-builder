@@ -12,11 +12,12 @@ This is a tool to be used in command line to create and publish *slug* artifacts
 # How to create and publish a slug?
 
 In order to make the tool working, following variables have to set in the running environment: 
+* JAVA_VERSION
 * ARTIFACTORY_URI
-* ARTIFACTORY_USERNAME
-* ARTIFACTORY_PASSWORD
-* SLUG_BUILDER_VERSION
-* JDK_FILE_NAME
+* WEBSTORE_URI
+* SLUG_RUNNER_VERSION
+* GITHUB_API_USER
+* GITHUB_API_TOKEN
 
 Once the variables are set and a fat jar is created, slug can be built by issuing a command:
 

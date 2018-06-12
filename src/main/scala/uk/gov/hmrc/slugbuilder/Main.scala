@@ -26,7 +26,7 @@ import scala.language.postfixOps
 
 object Main {
 
-  private lazy val slugBuilderVersion  = EnvironmentVariables.slugBuilderVersion.getOrExit
+  private lazy val slugRunnerVersion   = EnvironmentVariables.slugRunnerVersion.getOrExit
   private lazy val artifactoryUri      = EnvironmentVariables.artifactoryUri.getOrExit
   private lazy val artifactoryUsername = EnvironmentVariables.artifactoryUsername.getOrExit
   private lazy val artifactoryPassword = EnvironmentVariables.artifactoryPassword.getOrExit
@@ -44,7 +44,7 @@ object Main {
     new ArtifactoryConnector(
       httpClient,
       fileDownloader,
-      slugBuilderVersion,
+      slugRunnerVersion,
       artifactoryUri,
       artifactoryUsername,
       artifactoryPassword,
