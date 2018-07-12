@@ -31,6 +31,7 @@ import uk.gov.hmrc.slugbuilder.TestWSRequest
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import scala.concurrent.Future
+import scala.concurrent.duration.{Duration, _}
 import scala.language.postfixOps
 
 class FileDownloaderSpec extends WordSpec with MockFactory with ScalaFutures {
@@ -38,6 +39,11 @@ class FileDownloaderSpec extends WordSpec with MockFactory with ScalaFutures {
   "download" should {
 
     "return Right if file can be downloaded from the given url" in new Setup {
+      (wsRequest
+        .withRequestTimeout(_: Duration))
+        .expects(5 minutes)
+        .returning(wsRequest)
+
       (wsRequest.get _)
         .expects()
         .returning(Future.successful(wsResponse))
@@ -65,6 +71,11 @@ class FileDownloaderSpec extends WordSpec with MockFactory with ScalaFutures {
     }
 
     "return Left if there was an error on downloading the file" in new Setup {
+      (wsRequest
+        .withRequestTimeout(_: Duration))
+        .expects(5 minutes)
+        .returning(wsRequest)
+
       (wsRequest.get _)
         .expects()
         .returning(Future.successful(wsResponse))
@@ -85,6 +96,11 @@ class FileDownloaderSpec extends WordSpec with MockFactory with ScalaFutures {
     }
 
     "return Left if file does not exist" in new Setup {
+      (wsRequest
+        .withRequestTimeout(_: Duration))
+        .expects(5 minutes)
+        .returning(wsRequest)
+
       (wsRequest.get _)
         .expects()
         .returning(Future.successful(wsResponse))
@@ -100,6 +116,11 @@ class FileDownloaderSpec extends WordSpec with MockFactory with ScalaFutures {
     "return Left when got unexpected status from fetching the file" in {
       allHttpStatusCodes filterNot Seq(200, 404).contains foreach { status =>
         new Setup {
+          (wsRequest
+            .withRequestTimeout(_: Duration))
+            .expects(5 minutes)
+            .returning(wsRequest)
+
           (wsRequest.get _)
             .expects()
             .returning(Future.successful(wsResponse))
@@ -115,6 +136,11 @@ class FileDownloaderSpec extends WordSpec with MockFactory with ScalaFutures {
     }
 
     "return Left if fetching the file results in an exception" in new Setup {
+      (wsRequest
+        .withRequestTimeout(_: Duration))
+        .expects(5 minutes)
+        .returning(wsRequest)
+
       val exception = new Exception("some error")
       (wsRequest.get _)
         .expects()

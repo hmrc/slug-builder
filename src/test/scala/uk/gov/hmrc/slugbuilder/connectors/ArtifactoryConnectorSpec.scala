@@ -28,6 +28,7 @@ import uk.gov.hmrc.slugbuilder.generators.Generators.{allHttpStatusCodes, nonEmp
 import uk.gov.hmrc.slugbuilder.tools._
 import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, TestWSRequest}
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutures with Matchers {
   "verifySlugNotCreatedYet" should {
@@ -189,6 +190,11 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       Files.write(fileToUpload, "some content".getBytes())
 
       (wsRequest
+        .withRequestTimeout(_: Duration))
+        .expects(5 minutes)
+        .returning(wsRequest)
+
+      (wsRequest
         .withAuth(_: String, _: String, _: WSAuthScheme))
         .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
         .returning(wsRequest)
@@ -219,6 +225,11 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
 
       val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
       Files.write(fileToUpload, "some content".getBytes())
+
+      (wsRequest
+        .withRequestTimeout(_: Duration))
+        .expects(5 minutes)
+        .returning(wsRequest)
 
       (wsRequest
         .withAuth(_: String, _: String, _: WSAuthScheme))
