@@ -17,7 +17,7 @@
 package uk.gov.hmrc.slugbuilder
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission._
 import cats.implicits._
@@ -48,6 +48,8 @@ class SlugBuilder(
     val procFile        = slugDirectory resolve Paths.get("Procfile")
     val slugTgzFile     = Paths.get(artifactoryConnector.slugArtifactFileName(repositoryName, releaseVersion))
     val jdkDirectory    = slugDirectory.resolve(".jdk")
+    val profileD        = slugDirectory.resolve(".profile.d")
+    val javaSh          = profileD.resolve("java.sh")
 
     for {
       _ <- verifySlugNotCreatedYet(repositoryName, releaseVersion) map printSuccess
@@ -66,8 +68,23 @@ class SlugBuilder(
             s"Couldn't create .jdk directory at $jdkDirectory. Cause: ${exception.getMessage}")
       _ <- downloadJdk(jdk.toString) map printSuccess
       _ <- archiver.decompress(jdk, jdkDirectory) map printSuccess
+      _ <- perform(createDir(profileD)).leftMap(exception =>
+            s"Couldn't create $profileD directory. Cause: ${exception.getMessage}")
+      _ <- perform(createJavaSh(javaSh))
+            .leftMap(exception => s"Couldn't create the $javaSh. Cause: ${exception.getMessage}")
+            .map(_ => printSuccess(s"Created .profile.d/java.sh"))
       _ <- archiver.compress(slugTgzFile, slugDirectory) map printSuccess
       _ <- artifactoryConnector.publish(repositoryName, releaseVersion) map printSuccess
     } yield ()
   }.leftMap(printError)
+
+  private def createJavaSh(javaSh: Path): Unit =
+    createFile(
+      javaSh,
+      """PATH=$HOME/.jdk/bin:$PATH
+        |JAVA_HOME=$HOME/.jdk/""".stripMargin,
+      UTF_8,
+      CREATE_NEW
+    )
+
 }

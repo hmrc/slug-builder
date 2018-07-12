@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission._
-import org.mockito.Mockito.{doNothing, doThrow, when}
+import org.mockito.Mockito.{doThrow, verify, when}
 import org.scalatest.Matchers._
 import org.scalatest.WordSpec
 import org.scalatest.mockito.MockitoSugar
@@ -48,7 +48,25 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
       progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
       progressReporter.logs should contain(s"Slug published successfully to https://artifactory/some-slug.tgz")
+      progressReporter.logs should contain(s"Created .profile.d/java.sh")
 
+      verify(fileUtils).createDir(slugDirectory)
+
+      verify(fileUtils)
+        .setPermissions(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+
+      verify(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
+
+      verify(fileUtils).createDir(slugDirectory.resolve(".jdk"))
+
+      val profileD = slugDirectory.resolve(".profile.d")
+      verify(fileUtils).createDir(profileD)
+
+      val javaSh = profileD resolve "java.sh"
+      verify(fileUtils)
+        .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
     }
 
     "not create the slug if it already exists in the Webstore" in new Setup {
@@ -226,23 +244,11 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     when(artifactConnector.downloadAppConfigBase(repositoryName))
       .thenReturn(Right("app-config-base downloaded"))
 
-    doNothing().when(fileUtils).createDir(slugDirectory)
-
     when(tarArchiver.decompress(artifactFile, slugDirectory))
       .thenReturn(Right(s"Successfully decompressed $artifactFile"))
 
     when(startDockerScriptCreator.ensureStartDockerExists(slugDirectory, repositoryName))
       .thenReturn(Right(()))
-
-    doNothing()
-      .when(fileUtils)
-      .setPermissions(
-        startDockerFile,
-        Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
-
-    doNothing().when(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
-
-    doNothing().when(fileUtils).createDir(slugDirectory.resolve(".jdk"))
 
     when(artifactConnector.downloadJdk(jdkFileName))
       .thenReturn(Right(s"Successfully downloaded the JDK"))

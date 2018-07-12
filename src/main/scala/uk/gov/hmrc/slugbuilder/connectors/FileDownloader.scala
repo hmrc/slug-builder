@@ -43,10 +43,13 @@ case class DownloadError(message: String)
 
 class FileDownloader(wsClient: StandaloneWSClient)(implicit materializer: Materializer) {
 
+  private val requestTimeout = 5 minutes
+
   def download(fileUrl: FileUrl, destinationFileName: DestinationFileName): Either[DownloadError, Unit] =
     Await.result(
       wsClient
         .url(fileUrl.toString)
+        .withRequestTimeout(requestTimeout)
         .get()
         .flatMap { response =>
           response.status match {
@@ -58,7 +61,7 @@ class FileDownloader(wsClient: StandaloneWSClient)(implicit materializer: Materi
         .recover {
           case NonFatal(exception) => Left(DownloadError(exception.getMessage))
         },
-      2 minutes
+      requestTimeout
     )
 
   private implicit class ResponseOps(response: StandaloneWSResponse)(implicit materializer: Materializer) {

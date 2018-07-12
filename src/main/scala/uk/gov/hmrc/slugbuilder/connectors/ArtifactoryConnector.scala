@@ -36,6 +36,8 @@ class ArtifactoryConnector(
   jdkFileName: String,
   progressReporter: ProgressReporter) {
 
+  private val requestTimeout = 5 minutes
+
   def downloadAppConfigBase(repositoryName: RepositoryName): Either[String, String] = {
 
     val fileUrl = FileUrl(s"$artifactoryUri/webstore/app-config-base/$repositoryName.conf")
@@ -97,7 +99,7 @@ class ArtifactoryConnector(
           case NonFatal(exception) =>
             Left(s"Cannot check if slug exists at $publishUrl. Got exception: ${exception.getMessage}")
         },
-      2 minutes
+      requestTimeout
     )
   }
 
@@ -107,6 +109,7 @@ class ArtifactoryConnector(
     Await.result(
       wsClient
         .url(publishUrl)
+        .withRequestTimeout(requestTimeout)
         .withAuth(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
         .put(Paths.get(slugArtifactFileName(repositoryName, releaseVersion)).toFile)
         .map { response =>
@@ -118,7 +121,7 @@ class ArtifactoryConnector(
               Left(s"Could not publish slug to $publishUrl. Returned status $status")
           }
         },
-      2 minutes
+      requestTimeout
     )
   }
 }
