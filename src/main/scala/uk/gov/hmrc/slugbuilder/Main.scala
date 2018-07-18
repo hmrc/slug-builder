@@ -20,6 +20,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.implicits._
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
+import uk.gov.hmrc.slugbuilder.ArgParser.{Publish, Unpublish}
 import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, FileDownloader}
 import uk.gov.hmrc.slugbuilder.tools.{CliTools, FileUtils, TarArchiver}
 import scala.language.postfixOps
@@ -38,9 +39,7 @@ object Main {
   private lazy val progressReporter = new ProgressReporter()
   private lazy val httpClient       = StandaloneAhcWSClient()
   private lazy val fileDownloader   = new FileDownloader(httpClient)
-
-  private lazy val slugBuilder = new SlugBuilder(
-    progressReporter,
+  private lazy val artifactoryConnector =
     new ArtifactoryConnector(
       httpClient,
       fileDownloader,
@@ -49,33 +48,28 @@ object Main {
       artifactoryUsername,
       artifactoryPassword,
       jdkFileName,
-      progressReporter),
+      progressReporter)
+
+  private lazy val slugBuilder = new SlugBuilder(
+    progressReporter,
+    artifactoryConnector,
     new TarArchiver(new CliTools(progressReporter)),
     new StartDockerScriptCreator(),
     new FileUtils()
   )
 
-  def main(args: Array[String]): Unit = {
-
-    val repositoryName = args.get("Repository name", atIdx = 0).flatMap(RepositoryName.create).getOrExit
-    val releaseVersion = args.get("Release version", atIdx = 1).flatMap(ReleaseVersion.create).getOrExit
-
-    slugBuilder
-      .create(repositoryName, releaseVersion)
-      .fold(
-        _ => sys.exit(1),
-        _ => sys.exit(0)
-      )
-  }
-
-  private implicit class ArgsOps(args: Array[String]) {
-
-    def get(argName: String, atIdx: Int): Either[String, String] =
-      if (atIdx >= args.length) {
-        Left(s"'$argName' required as argument ${atIdx + 1}.")
-      } else
-        Right(args(atIdx))
-  }
+  def main(args: Array[String]): Unit =
+    ArgParser.parse(args).getOrExit match {
+      case Publish(repositoryName, releaseVersion) =>
+        slugBuilder
+          .create(repositoryName, releaseVersion)
+          .fold(
+            _ => sys.exit(1),
+            _ => sys.exit(0)
+          )
+      case Unpublish(repositoryName, releaseVersion) =>
+        artifactoryConnector.unpublish(repositoryName, releaseVersion) map progressReporter.printSuccess
+    }
 
   private implicit class EitherOps[T](either: Either[String, T]) {
 

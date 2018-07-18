@@ -264,6 +264,101 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     }
   }
 
+  "unpublish" should {
+    "do a DELETE with proper authentication" in new Setup {
+      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+
+      (wsClient
+        .url(_: String))
+        .expects(url)
+        .returning(wsRequest)
+
+      val unpublishUrl =
+        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
+
+      (wsRequest
+        .withAuth(_: String, _: String, _: WSAuthScheme))
+        .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
+        .returning(wsRequest)
+
+      (wsRequest.delete _)
+        .expects()
+        .returning(Future.successful(wsResponse))
+
+      (wsResponse.status _)
+        .expects()
+        .returning(204)
+
+      connector.unpublish(repositoryName, releaseVersion) shouldBe Right(
+        s"Slug unpublished successfully from $unpublishUrl")
+    }
+
+    "not do anything is the slug does not exist" in new Setup {
+      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+
+      (wsClient
+        .url(_: String))
+        .expects(url)
+        .returning(wsRequest)
+
+      val unpublishUrl =
+        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
+
+      (wsRequest
+        .withAuth(_: String, _: String, _: WSAuthScheme))
+        .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
+        .returning(wsRequest)
+
+      (wsRequest.delete _)
+        .expects()
+        .returning(Future.successful(wsResponse))
+
+      (wsResponse.status _)
+        .expects()
+        .returning(404)
+
+      connector.unpublish(repositoryName, releaseVersion) shouldBe Right(
+        s"Nothing to do: slug does not exist in $unpublishUrl")
+    }
+
+    "handle errors" in new Setup {
+      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+
+      (wsClient
+        .url(_: String))
+        .expects(url)
+        .returning(wsRequest)
+
+      val unpublishUrl =
+        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
+
+      (wsRequest
+        .withAuth(_: String, _: String, _: WSAuthScheme))
+        .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
+        .returning(wsRequest)
+
+      (wsRequest.delete _)
+        .expects()
+        .returning(Future.successful(wsResponse))
+
+      (wsResponse.status _)
+        .expects()
+        .returning(401)
+      val responseBody = """|{
+                            |  "errors" : [ {
+                            |    "status" : 401,
+                            |    "message" : "Some ERROR"
+                            |  } ]
+                            |}""".stripMargin
+      (wsResponse.body _)
+        .expects()
+        .returning(responseBody)
+
+      connector.unpublish(repositoryName, releaseVersion) shouldBe Left(
+        s"Could not unpublish slug from $unpublishUrl. Returned status 401")
+    }
+  }
+
   private trait Setup {
     val artifactoryUri       = "https://artifactory"
     val artifactoryUsername  = "username"
