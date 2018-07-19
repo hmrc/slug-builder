@@ -36,11 +36,13 @@ class ArtifactoryConnector(
   jdkFileName: String,
   progressReporter: ProgressReporter) {
 
-  private val requestTimeout = 5 minutes
+  private val requestTimeout      = 5 minutes
+  private val webstoreVirtualRepo = "webstore"
+  private val webstoreLocalRepo   = "webstore-local"
 
   def downloadAppConfigBase(repositoryName: RepositoryName): Either[String, String] = {
 
-    val fileUrl = FileUrl(s"$artifactoryUri/webstore/app-config-base/$repositoryName.conf")
+    val fileUrl = FileUrl(s"$artifactoryUri/$webstoreVirtualRepo/app-config-base/$repositoryName.conf")
 
     fileDownloader
       .download(fileUrl, DestinationFileName(AppConfigBaseFileName(repositoryName).toString))
@@ -52,7 +54,7 @@ class ArtifactoryConnector(
 
   def downloadJdk(targetFile: String): Either[String, String] = {
 
-    val javaDownloadUri = FileUrl(s"$artifactoryUri/webstore/java/$jdkFileName")
+    val javaDownloadUri = FileUrl(s"$artifactoryUri/$webstoreVirtualRepo/java/$jdkFileName")
     fileDownloader
       .download(javaDownloadUri, DestinationFileName(targetFile))
       .bimap(
@@ -75,8 +77,8 @@ class ArtifactoryConnector(
       )
   }
 
-  def slugUrl(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
-    s"$artifactoryUri/webstore/slugs/$repositoryName/${slugArtifactFileName(repositoryName, releaseVersion)}"
+  private def slugUrl(webstoreRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
+    s"$artifactoryUri/$webstoreRepoName/slugs/$repositoryName/${slugArtifactFileName(repositoryName, releaseVersion)}"
 
   def slugArtifactFileName(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
     s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
@@ -84,7 +86,7 @@ class ArtifactoryConnector(
   def verifySlugNotCreatedYet(
     repositoryName: RepositoryName,
     releaseVersion: ReleaseVersion): Either[String, String] = {
-    val publishUrl = slugUrl(repositoryName, releaseVersion)
+    val publishUrl = slugUrl(webstoreVirtualRepo, repositoryName, releaseVersion)
     Await.result(
       wsClient
         .url(publishUrl)
@@ -104,7 +106,7 @@ class ArtifactoryConnector(
   }
 
   def publish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
-    val publishUrl = slugUrl(repositoryName, releaseVersion)
+    val publishUrl = slugUrl(webstoreLocalRepo, repositoryName, releaseVersion)
 
     Await.result(
       wsClient
@@ -126,7 +128,7 @@ class ArtifactoryConnector(
   }
 
   def unpublish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
-    val unpublishUrl = slugUrl(repositoryName, releaseVersion)
+    val unpublishUrl = slugUrl(webstoreLocalRepo, repositoryName, releaseVersion)
 
     Await.result(
       wsClient

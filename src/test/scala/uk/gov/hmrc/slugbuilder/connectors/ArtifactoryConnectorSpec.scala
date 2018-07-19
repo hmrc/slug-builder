@@ -177,14 +177,11 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
 
   "publish" should {
     "do a PUT with proper authentication" in new Setup {
-      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
       (wsClient
         .url(_: String))
-        .expects(url)
+        .expects(slugUrl)
         .returning(wsRequest)
-
-      val publishUrl =
-        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
       val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
       Files.write(fileToUpload, "some content".getBytes())
@@ -208,20 +205,17 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .expects()
         .returning(201)
 
-      connector.publish(repositoryName, releaseVersion) shouldBe Right(s"Slug published successfully to $publishUrl")
+      connector.publish(repositoryName, releaseVersion) shouldBe Right(s"Slug published successfully to $slugUrl")
 
       fileToUpload.toFile.delete()
     }
 
     "handle errors" in new Setup {
-      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
       (wsClient
         .url(_: String))
-        .expects(url)
+        .expects(slugUrl)
         .returning(wsRequest)
-
-      val publishUrl =
-        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
       val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
       Files.write(fileToUpload, "some content".getBytes())
@@ -255,10 +249,10 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(responseBody)
 
       connector.publish(repositoryName, releaseVersion) shouldBe Left(
-        s"Could not publish slug to $publishUrl. Returned status 403")
+        s"Could not publish slug to $slugUrl. Returned status 403")
 
       progressReporter.logs should contain(
-        s"""PUT to $publishUrl returned with errors: {"errors":[{"status":403,"message":"Some ERROR"}]}""")
+        s"""PUT to $slugUrl returned with errors: {"errors":[{"status":403,"message":"Some ERROR"}]}""")
 
       fileToUpload.toFile.delete()
     }
@@ -266,15 +260,12 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
 
   "unpublish" should {
     "do a DELETE with proper authentication" in new Setup {
-      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
 
       (wsClient
         .url(_: String))
-        .expects(url)
+        .expects(slugUrl)
         .returning(wsRequest)
-
-      val unpublishUrl =
-        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
       (wsRequest
         .withAuth(_: String, _: String, _: WSAuthScheme))
@@ -289,20 +280,16 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .expects()
         .returning(204)
 
-      connector.unpublish(repositoryName, releaseVersion) shouldBe Right(
-        s"Slug unpublished successfully from $unpublishUrl")
+      connector.unpublish(repositoryName, releaseVersion) shouldBe Right(s"Slug unpublished successfully from $slugUrl")
     }
 
     "not do anything is the slug does not exist" in new Setup {
-      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
 
       (wsClient
         .url(_: String))
-        .expects(url)
+        .expects(slugUrl)
         .returning(wsRequest)
-
-      val unpublishUrl =
-        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
       (wsRequest
         .withAuth(_: String, _: String, _: WSAuthScheme))
@@ -318,19 +305,16 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(404)
 
       connector.unpublish(repositoryName, releaseVersion) shouldBe Right(
-        s"Nothing to do: slug does not exist in $unpublishUrl")
+        s"Nothing to do: slug does not exist in $slugUrl")
     }
 
     "handle errors" in new Setup {
-      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+      val slugurl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
 
       (wsClient
         .url(_: String))
-        .expects(url)
+        .expects(slugurl)
         .returning(wsRequest)
-
-      val unpublishUrl =
-        s"$artifactoryUri/webstore/slugs/$repositoryName/${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
       (wsRequest
         .withAuth(_: String, _: String, _: WSAuthScheme))
@@ -355,7 +339,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(responseBody)
 
       connector.unpublish(repositoryName, releaseVersion) shouldBe Left(
-        s"Could not unpublish slug from $unpublishUrl. Returned status 401")
+        s"Could not unpublish slug from $slugurl. Returned status 401")
     }
   }
 
