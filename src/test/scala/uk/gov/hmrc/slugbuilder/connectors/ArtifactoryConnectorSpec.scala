@@ -31,7 +31,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutures with Matchers {
+
   "verifySlugNotCreatedYet" should {
+
     "return Left if slug already exists" in new Setup {
       val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
       (wsClient
@@ -123,7 +125,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(Right())
 
       connector
-        .downloadAppConfigBase(repositoryName) shouldBe Right(s"app-config-base successfully downloaded from $fileUrl")
+        .downloadAppConfigBase(repositoryName) shouldBe Right(s"Successfully downloaded app-config-base from $fileUrl")
     }
 
     "return Left if there was an error when downloading app-config-base from Webstore" in new Setup {
@@ -155,7 +157,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(Right())
 
       connector.downloadArtifact(repositoryName, releaseVersion) shouldBe
-        Right(s"Artifact successfully downloaded from $fileUrl")
+        Right(s"Successfully downloaded artifact from $fileUrl")
     }
 
     "return Left if there was an error when downloading the artifact from Artifactory" in new Setup {
@@ -205,7 +207,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .expects()
         .returning(201)
 
-      connector.publish(repositoryName, releaseVersion) shouldBe Right(s"Slug published successfully to $slugUrl")
+      connector.publish(repositoryName, releaseVersion) shouldBe Right(s"Successfully published slug to $slugUrl")
 
       fileToUpload.toFile.delete()
     }

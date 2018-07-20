@@ -72,7 +72,7 @@ class SlugBuilder(
             s"Couldn't create $profileD directory. Cause: ${exception.getMessage}")
       _ <- perform(createJavaSh(javaSh))
             .leftMap(exception => s"Couldn't create the $javaSh. Cause: ${exception.getMessage}")
-            .map(_ => printSuccess(s"Created .profile.d/java.sh"))
+            .map(_ => printSuccess(s"Successfully created .profile.d/java.sh"))
       _ <- archiver.compress(slugTgzFile, slugDirectory) map printSuccess
       _ <- artifactoryConnector.publish(repositoryName, releaseVersion) map printSuccess
     } yield ()

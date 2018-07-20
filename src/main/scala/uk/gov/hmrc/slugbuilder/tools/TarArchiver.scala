@@ -24,7 +24,10 @@ class TarArchiver(cliTools: CliTools) {
   def decompress(tgzFile: Path, outputDirectory: Path, preservePermissions: Boolean = true): Either[String, String] =
     cliTools
       .run(Array("tar", if (preservePermissions) "-pxzf" else "-xzf", tgzFile.toString, "-C", outputDirectory.toString))
-      .bimap(error => s"Couldn't decompress $tgzFile. Cause: $error", _ => s"Successfully decompressed $tgzFile")
+      .bimap(
+        error => s"Couldn't decompress $tgzFile. Cause: $error",
+        _ => s"Successfully decompressed $tgzFile"
+      )
 
   def compress(tgzFile: Path, inputDirectory: Path): Either[String, String] =
     cliTools

@@ -48,7 +48,7 @@ class ArtifactoryConnector(
       .download(fileUrl, DestinationFileName(AppConfigBaseFileName(repositoryName).toString))
       .bimap(
         downloadError => s"app-config-base couldn't be downloaded from $fileUrl. Cause: $downloadError",
-        _ => s"app-config-base successfully downloaded from $fileUrl"
+        _ => s"Successfully downloaded app-config-base from $fileUrl"
       )
   }
 
@@ -73,7 +73,7 @@ class ArtifactoryConnector(
       .download(fileUrl, DestinationFileName(ArtifactFileName(repositoryName, releaseVersion).toString))
       .bimap(
         downloadError => s"Artifact couldn't be downloaded from $fileUrl. Cause: $downloadError",
-        _ => s"Artifact successfully downloaded from $fileUrl"
+        _ => s"Successfully downloaded artifact from $fileUrl"
       )
   }
 
@@ -116,7 +116,7 @@ class ArtifactoryConnector(
         .put(Paths.get(slugArtifactFileName(repositoryName, releaseVersion)).toFile)
         .map { response =>
           response.status match {
-            case 200 | 201 | 202 | 203 | 204 => Right(s"Slug published successfully to $publishUrl")
+            case 200 | 201 | 202 | 203 | 204 => Right(s"Successfully published slug to $publishUrl")
             case status =>
               progressReporter.printError(
                 s"PUT to $publishUrl returned with errors: ${Json.stringify(Json.parse(response.body))}"

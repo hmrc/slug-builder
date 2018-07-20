@@ -47,8 +47,8 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
       progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
-      progressReporter.logs should contain(s"Slug published successfully to https://artifactory/some-slug.tgz")
-      progressReporter.logs should contain(s"Created .profile.d/java.sh")
+      progressReporter.logs should contain("Slug published successfully to https://artifactory/some-slug.tgz")
+      progressReporter.logs should contain("Successfully created .profile.d/java.sh")
 
       verify(fileUtils).createDir(slugDirectory)
 
