@@ -1,9 +1,8 @@
 import sbt.Keys._
-import sbt.{addArtifact, _}
+import sbt._
 import uk.gov.hmrc.DefaultBuildSettings._
 import uk.gov.hmrc.SbtArtifactory
 import uk.gov.hmrc.versioning.SbtGitVersioning
-import uk.gov.hmrc.versioning.SbtGitVersioning.majorVersion
 
 val appName: String = "slug-builder"
 
