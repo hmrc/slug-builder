@@ -58,18 +58,21 @@ object Main {
     new FileUtils()
   )
 
+  import progressReporter._
+
   def main(args: Array[String]): Unit =
-    ArgParser.parse(args).getOrExit match {
+    (ArgParser.parse(args).getOrExit match {
       case Publish(repositoryName, releaseVersion) =>
         slugBuilder
           .create(repositoryName, releaseVersion)
-          .fold(
-            _ => sys.exit(1),
-            _ => sys.exit(0)
-          )
       case Unpublish(repositoryName, releaseVersion) =>
-        artifactoryConnector.unpublish(repositoryName, releaseVersion) map progressReporter.printSuccess
-    }
+        artifactoryConnector
+          .unpublish(repositoryName, releaseVersion)
+          .map(printSuccess)
+    }).fold(
+        _ => sys.exit(1),
+        _ => sys.exit(0)
+      )
 
   private implicit class EitherOps[T](either: Either[String, T]) {
 

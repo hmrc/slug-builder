@@ -119,7 +119,8 @@ class ArtifactoryConnector(
             case 200 | 201 | 202 | 203 | 204 => Right(s"Slug published successfully to $publishUrl")
             case status =>
               progressReporter.printError(
-                s"PUT to $publishUrl returned with errors: ${Json.stringify(Json.parse(response.body))}")
+                s"PUT to $publishUrl returned with errors: ${Json.stringify(Json.parse(response.body))}"
+              )
               Left(s"Could not publish slug to $publishUrl. Returned status $status")
           }
         },
@@ -141,7 +142,8 @@ class ArtifactoryConnector(
             case 404 => Right(s"Nothing to do: slug does not exist in $unpublishUrl")
             case status =>
               progressReporter.printError(
-                s"DELETE from $unpublishUrl returned with errors: ${Json.stringify(Json.parse(response.body))}")
+                s"DELETE from $unpublishUrl returned with errors: ${Json.stringify(Json.parse(response.body))}"
+              )
               Left(s"Could not unpublish slug from $unpublishUrl. Returned status $status")
           }
         },
