@@ -37,12 +37,20 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(startDockerShInWorkspace)
         .returning(true)
 
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      move
+        .expects(appConfigBase, confDirectory resolve appConfigBase)
+        .returning(())
+
       copy
         .expects(startDockerShInWorkspace, startDockerSh)
         .returning(())
 
       startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe
-        Right("Copied start-docker.sh from the workspace to the slug")
+        Right("Successfully copied start-docker.sh from the workspace to the slug")
     }
 
     "create the 'conf' directory under 'slug', " +
@@ -72,7 +80,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .returning(())
 
       startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe
-        Right("Created new start-docker.sh script")
+        Right("Successfully created new start-docker.sh script")
     }
 
     "return error when check if start-docker.sh exists fails" in new Setup {
@@ -91,6 +99,14 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
       checkFileExist
         .expects(startDockerShInWorkspace)
         .returning(true)
+
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      move
+        .expects(appConfigBase, confDirectory resolve appConfigBase)
+        .returning(())
 
       val exception = new Exception("exception message")
       copy

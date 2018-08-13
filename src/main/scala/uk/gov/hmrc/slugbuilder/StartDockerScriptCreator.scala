@@ -48,21 +48,22 @@ class StartDockerScriptCreator(
 
     perform(existCheck(startDockerFileInWorkspace))
       .leftMap(exception => s"Couldn't check if $startDockerFileInWorkspace exists. Cause: ${exception.getMessage}")
-      .flatMap {
-        case true =>
-          for {
-            _ <- perform(copy(startDockerFileInWorkspace, startDockerFileInSlug)) leftMap (exception =>
+      .flatMap { useProvidedStartDocker =>
+        for {
+          _ <- perform(create(confDirectory)) leftMap (exception =>
+                s"Couldn't create conf directory at $confDirectory. Cause: ${exception.getMessage}")
+          _ <- perform(move(appConfigBase, confDirectory resolve appConfigBase)) leftMap (exception =>
+                s"Couldn't move $appConfigBase to $confDirectory. Cause: $exception")
+          _ <- if (useProvidedStartDocker)
+                perform(copy(startDockerFileInWorkspace, startDockerFileInSlug)) leftMap (exception =>
                   s"Couldn't copy the $startDockerFileInWorkspace script to the slug directory. Cause: $exception")
-          } yield "Copied start-docker.sh from the workspace to the slug"
-        case false =>
-          for {
-            _ <- perform(create(confDirectory)) leftMap (exception =>
-                  s"Couldn't create conf directory at $confDirectory. Cause: ${exception.getMessage}")
-            _ <- perform(move(appConfigBase, confDirectory resolve appConfigBase)) leftMap (exception =>
-                  s"Couldn't move $appConfigBase to $confDirectory. Cause: $exception")
-            _ <- perform(createFile(startDockerFileInSlug, startDockerContent, UTF_8, CREATE_NEW)) leftMap (exception =>
+              else
+                perform(createFile(startDockerFileInSlug, startDockerContent, UTF_8, CREATE_NEW)) leftMap (exception =>
                   s"Couldn't create $startDockerFileInSlug. Cause: $exception")
-          } yield "Created new start-docker.sh script"
+        } yield
+          if (useProvidedStartDocker) "Successfully copied start-docker.sh from the workspace to the slug"
+          else "Successfully created new start-docker.sh script"
+
       }
   }
 }
