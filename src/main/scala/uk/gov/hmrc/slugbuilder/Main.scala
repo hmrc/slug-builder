@@ -70,9 +70,9 @@ object Main {
           .unpublish(repositoryName, releaseVersion)
           .map(printSuccess)
     }).fold(
-        _ => sys.exit(1),
-        _ => sys.exit(0)
-      )
+      _ => sys.exit(1),
+      _ => sys.exit(0)
+    )
 
   private implicit class EitherOps[T](either: Either[String, T]) {
 

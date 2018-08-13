@@ -28,23 +28,32 @@ class StartDockerScriptCreator(
   create: Path => Unit        = path => path.toFile.mkdir(),
   existCheck: Path => Boolean = path => path.toFile.exists(),
   move: (Path, Path) => Unit  = (file, directory) => Files.move(file, directory),
+  copy: (Path, Path) => Unit  = (source, target) => Files.copy(source, target),
   createFile: (Path, Seq[String], Charset, OpenOption) => Unit = (file, content, charset, openOption) =>
     Files.write(file, content, charset, openOption)) {
 
-  def ensureStartDockerExists(slugDirectory: Path, repositoryName: RepositoryName): Either[String, Unit] = {
-    val startDockerFileInSlug = slugDirectory resolve Paths.get("start-docker.sh")
-    val appConfigBase         = Paths.get(AppConfigBaseFileName(repositoryName).toString)
-    val confDirectory         = slugDirectory resolve "conf"
+  def ensureStartDockerExists(
+    workspace: Path,
+    slugDirectory: Path,
+    repositoryName: RepositoryName): Either[String, String] = {
+    val startDockerFileInWorkspace = workspace resolve Paths.get("start-docker.sh")
+    val startDockerFileInSlug      = slugDirectory resolve Paths.get("start-docker.sh")
+    val appConfigBase              = Paths.get(AppConfigBaseFileName(repositoryName).toString)
+    val confDirectory              = slugDirectory resolve "conf"
     val startDockerContent = Seq(
       "#!/bin/sh",
       s"SCRIPT=$$(find . -type f -name $repositoryName)",
       s"exec $$SCRIPT $$HMRC_CONFIG -Dconfig.file=${confDirectory.toFile.getName}/$appConfigBase"
     )
 
-    perform(existCheck(startDockerFileInSlug))
-      .leftMap(exception => s"Couldn't check if $startDockerFileInSlug exists. Cause: ${exception.getMessage}")
+    perform(existCheck(startDockerFileInWorkspace))
+      .leftMap(exception => s"Couldn't check if $startDockerFileInWorkspace exists. Cause: ${exception.getMessage}")
       .flatMap {
-        case true => Right(())
+        case true =>
+          for {
+            _ <- perform(copy(startDockerFileInWorkspace, startDockerFileInSlug)) leftMap (exception =>
+                  s"Couldn't copy the $startDockerFileInWorkspace script to the slug directory. Cause: $exception")
+          } yield "Copied start-docker.sh from the workspace to the slug"
         case false =>
           for {
             _ <- perform(create(confDirectory)) leftMap (exception =>
@@ -53,7 +62,7 @@ class StartDockerScriptCreator(
                   s"Couldn't move $appConfigBase to $confDirectory. Cause: $exception")
             _ <- perform(createFile(startDockerFileInSlug, startDockerContent, UTF_8, CREATE_NEW)) leftMap (exception =>
                   s"Couldn't create $startDockerFileInSlug. Cause: $exception")
-          } yield ()
+          } yield "Created new start-docker.sh script"
       }
   }
 }

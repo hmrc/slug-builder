@@ -118,7 +118,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     "return error when start-docker.sh creation return left" in new Setup {
 
       val errorMessage = "error message"
-      when(startDockerScriptCreator.ensureStartDockerExists(slugDirectory, repositoryName))
+      when(startDockerScriptCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName))
         .thenReturn(Left(errorMessage))
 
       slugBuilder.create(repositoryName, releaseVersion) should be('left)
@@ -198,14 +198,15 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
   }
 
   private trait Setup {
-    val repositoryName    = repositoryNameGen.generateOne
-    val releaseVersion    = releaseVersionGen.generateOne
-    val artifactFile      = Paths.get(ArtifactFileName(repositoryName, releaseVersion).toString)
-    val slugDirectory     = Paths.get("slug")
-    val startDockerFile   = slugDirectory resolve "start-docker.sh"
-    val procFile          = slugDirectory resolve "Procfile"
-    val slugRunnerVersion = "0.5.2"
-    val slugTgzFile       = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
+    val repositoryName     = repositoryNameGen.generateOne
+    val releaseVersion     = releaseVersionGen.generateOne
+    val artifactFile       = Paths.get(ArtifactFileName(repositoryName, releaseVersion).toString)
+    val workspaceDirectory = Paths.get(".")
+    val slugDirectory      = Paths.get("slug")
+    val startDockerFile    = slugDirectory resolve "start-docker.sh"
+    val procFile           = slugDirectory resolve "Procfile"
+    val slugRunnerVersion  = "0.5.2"
+    val slugTgzFile        = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
 
     val progressReporter = new ProgressReporter {
 
@@ -247,8 +248,8 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     when(tarArchiver.decompress(artifactFile, slugDirectory))
       .thenReturn(Right(s"Successfully decompressed $artifactFile"))
 
-    when(startDockerScriptCreator.ensureStartDockerExists(slugDirectory, repositoryName))
-      .thenReturn(Right(()))
+    when(startDockerScriptCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName))
+      .thenReturn(Right("Created new start-docker.sh script"))
 
     when(artifactConnector.downloadJdk(jdkFileName))
       .thenReturn(Right(s"Successfully downloaded the JDK"))

@@ -34,10 +34,15 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
 
     "do nothing if 'start-docker.sh' already exists" in new Setup {
       checkFileExist
-        .expects(startDockerSh)
+        .expects(startDockerShInWorkspace)
         .returning(true)
 
-      startDockerShCreator.ensureStartDockerExists(slugDirectory, repositoryName) shouldBe Right(())
+      copy
+        .expects(startDockerShInWorkspace, startDockerSh)
+        .returning(())
+
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe
+        Right("Copied start-docker.sh from the workspace to the slug")
     }
 
     "create the 'conf' directory under 'slug', " +
@@ -46,7 +51,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
       "if the 'start-docker.sh' doesn't exist" in new Setup {
 
       checkFileExist
-        .expects(startDockerSh)
+        .expects(startDockerShInWorkspace)
         .returning(false)
 
       createDir
@@ -66,25 +71,41 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(startDockerSh, startDockerContent, UTF_8, CREATE_NEW)
         .returning(())
 
-      startDockerShCreator.ensureStartDockerExists(slugDirectory, repositoryName) shouldBe Right(())
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe
+        Right("Created new start-docker.sh script")
     }
 
     "return error when check if start-docker.sh exists fails" in new Setup {
 
       val exception = new Exception("exception message")
       checkFileExist
-        .expects(startDockerSh)
+        .expects(startDockerShInWorkspace)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(slugDirectory, repositoryName) shouldBe Left(
-        s"Couldn't check if $startDockerSh exists. Cause: ${exception.getMessage}"
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
+        s"Couldn't check if $startDockerShInWorkspace exists. Cause: ${exception.getMessage}"
+      )
+    }
+    "return error when copy of start-docker.sh fails" in new Setup {
+
+      checkFileExist
+        .expects(startDockerShInWorkspace)
+        .returning(true)
+
+      val exception = new Exception("exception message")
+      copy
+        .expects(startDockerShInWorkspace, startDockerSh)
+        .throwing(exception)
+
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
+        s"Couldn't copy the $startDockerShInWorkspace script to the slug directory. Cause: $exception"
       )
     }
 
     "return error when conf directory creation fails" in new Setup {
 
       checkFileExist
-        .expects(startDockerSh)
+        .expects(startDockerShInWorkspace)
         .returning(false)
 
       val exception = new Exception("exception message")
@@ -92,7 +113,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(confDirectory)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(slugDirectory, repositoryName) shouldBe Left(
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
         s"Couldn't create conf directory at $confDirectory. Cause: ${exception.getMessage}"
       )
     }
@@ -100,7 +121,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
     "return error when moving app-config-base to the conf directory fails" in new Setup {
 
       checkFileExist
-        .expects(startDockerSh)
+        .expects(startDockerShInWorkspace)
         .returning(false)
 
       createDir
@@ -112,7 +133,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(appConfigBase, confDirectory resolve appConfigBase)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(slugDirectory, repositoryName) shouldBe Left(
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
         s"Couldn't move $appConfigBase to $confDirectory. Cause: $exception"
       )
     }
@@ -120,7 +141,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
     "return error when creating start-docker.sh fails" in new Setup {
 
       checkFileExist
-        .expects(startDockerSh)
+        .expects(startDockerShInWorkspace)
         .returning(false)
 
       createDir
@@ -136,24 +157,27 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(startDockerSh, *, *, *)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(slugDirectory, repositoryName) shouldBe Left(
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
         s"Couldn't create $startDockerSh. Cause: $exception"
       )
     }
   }
 
   private trait Setup {
-    val repositoryName = repositoryNameGen.generateOne
-    val slugDirectory  = Paths.get("slug")
-    val startDockerSh  = slugDirectory resolve "start-docker.sh"
-    val confDirectory  = slugDirectory resolve "conf"
-    val appConfigBase  = Paths.get(AppConfigBaseFileName(repositoryName).toString)
+    val repositoryName           = repositoryNameGen.generateOne
+    val workspaceDirectory       = Paths.get(".")
+    val slugDirectory            = Paths.get("slug")
+    val startDockerShInWorkspace = workspaceDirectory resolve "start-docker.sh"
+    val startDockerSh            = slugDirectory resolve "start-docker.sh"
+    val confDirectory            = slugDirectory resolve "conf"
+    val appConfigBase            = Paths.get(AppConfigBaseFileName(repositoryName).toString)
 
     val createDir            = mockFunction[Path, Unit]
     val checkFileExist       = mockFunction[Path, Boolean]
     val move                 = mockFunction[Path, Path, Unit]
+    val copy                 = mockFunction[Path, Path, Unit]
     val createFile           = mockFunction[Path, Seq[String], Charset, OpenOption, Unit]
-    val startDockerShCreator = new StartDockerScriptCreator(createDir, checkFileExist, move, createFile)
+    val startDockerShCreator = new StartDockerScriptCreator(createDir, checkFileExist, move, copy, createFile)
   }
 
   private implicit def pathToFile(path: Path): File = path.toFile
