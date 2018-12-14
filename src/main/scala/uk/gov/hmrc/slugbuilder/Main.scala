@@ -63,9 +63,9 @@ object Main {
 
   def main(args: Array[String]): Unit =
     (ArgParser.parse(args).getOrExit match {
-      case Publish(repositoryName, releaseVersion) =>
+      case Publish(repositoryName, releaseVersion, additionalBinaries) =>
         slugBuilder
-          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts)
+          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, additionalBinaries)
       case Unpublish(repositoryName, releaseVersion) =>
         artifactoryConnector
           .unpublish(repositoryName, releaseVersion)

@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import java.net.URL
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Path, Paths}
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission._
+
 import cats.implicits._
 import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
@@ -39,7 +41,7 @@ class SlugBuilder(
   private val startDockerPermissions =
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
-  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts]) = {
+  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts], additionalBinaries:Seq[(String, String)] = Seq()) = {
 
     val artifact           = ArtifactFileName(repositoryName, releaseVersion)
     val jdk                = Paths.get("jdk.tgz")
@@ -51,6 +53,7 @@ class SlugBuilder(
     val jdkDirectory       = slugDirectory.resolve(".jdk")
     val profileD           = slugDirectory.resolve(".profile.d")
     val javaSh             = profileD.resolve("java.sh")
+    val bin                = slugDirectory.resolve("bin")
 
     for {
       _ <- verifySlugNotCreatedYet(repositoryName, releaseVersion) map printSuccess
@@ -73,8 +76,13 @@ class SlugBuilder(
       _ <- perform(createJavaSh(javaSh))
             .leftMap(exception => s"Couldn't create the $javaSh. Cause: ${exception.getMessage}")
             .map(_ => printSuccess(s"Successfully created .profile.d/java.sh"))
+      _ <- perform(createDir(bin)).leftMap(exception => s"Couldn't create the bin folder. Cause: ${exception.getMessage}")
+      _ <- downloadAdditionalBinaries(additionalBinaries) map printSuccess
+      _ <- additionalBinaries.map(p => Paths.get(p._2)).filter(fileUtils.isTar)
+        .map(p => archiver.decompress(p, p))
+        .foldLeft(Right(""):Either[String, String]){ (a, b) =>  b.combine(a)  } map printSuccess
       _ <- archiver.compress(slugTgzFile, slugDirectory) map printSuccess
-      _ <- artifactoryConnector.publish(repositoryName, releaseVersion) map printSuccess
+      /*_ <- artifactoryConnector.publish(repositoryName, releaseVersion) map printSuccess*/
     } yield ()
   }.leftMap(printError)
 

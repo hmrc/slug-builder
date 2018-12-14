@@ -11,7 +11,7 @@ This is a tool to be used in command line to create and publish *slug* artifacts
 
 # How to create and publish a slug?
 
-In order to make the tool working, following variables have to set in the running environment: 
+In order to make the tool work, following variables have to set in the running environment:
 * JAVA_VERSION
 * ARTIFACTORY_URI
 * WEBSTORE_URI

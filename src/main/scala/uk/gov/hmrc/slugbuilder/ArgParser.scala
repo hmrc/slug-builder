@@ -25,7 +25,7 @@ object ArgParser {
     val releaseVersion: ReleaseVersion
   }
 
-  case class Publish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) extends Config
+  case class Publish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, additionalBinaries:Seq[(String, String)] = Seq()) extends Config
 
   case class Unpublish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) extends Config
 
@@ -37,11 +37,20 @@ object ArgParser {
                 }
       repoName <- args.get("repository-name", atIdx = 1).flatMap(RepositoryName.create)
       version  <- args.get("release-version", atIdx = 2).flatMap(ReleaseVersion.create)
+      additionalBinaries  <- args.collectRemaining(3).right.flatMap(args => pairArgs(args))
     } yield
       (command: @unchecked) match {
-        case "publish"   => Publish(repoName, version)
+        case "publish"   => Publish(repoName, version, additionalBinaries)
         case "unpublish" => Unpublish(repoName, version)
       }
+
+  def pairArgs(args:Seq[String]):Either[String, List[(String,String)]] = {
+    if(args.size % 2 == 0) {
+      Right(args.grouped(2).map { case Seq(a, b) => (a, b) }.toList)
+    }else{
+      Left("Argument is missing a pair")
+    }
+  }
 
   private implicit class ArgsOps(args: Array[String]) {
 
@@ -50,5 +59,13 @@ object ArgParser {
         Left(s"'$argName' required as argument ${atIdx + 1}.")
       else
         Right(args(atIdx))
+
+    def collectRemaining(atIdx:Int):Either[String, Seq[String]] = {
+      if(atIdx < args.length){
+        Right(Seq())
+      }else{
+        Right(args.takeRight(args.length - atIdx))
+      }
+    }
   }
 }

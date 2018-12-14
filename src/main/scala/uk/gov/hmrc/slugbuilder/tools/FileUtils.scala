@@ -30,4 +30,8 @@ class FileUtils {
 
   def createFile(file: Path, content: String, charset: Charset, openOption: OpenOption): Unit =
     Files.write(file, Seq(content), charset, openOption)
+
+  def isTar(file: Path):Boolean = {
+     file.getFileName.endsWith("tar") || file.getFileName.endsWith("tar.gz")
+  }
 }

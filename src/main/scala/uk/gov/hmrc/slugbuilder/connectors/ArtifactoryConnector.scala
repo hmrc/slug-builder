@@ -15,12 +15,15 @@
  */
 
 package uk.gov.hmrc.slugbuilder.connectors
+import java.net.URL
 import java.nio.file.Paths
+
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import uk.gov.hmrc.slugbuilder._
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -39,6 +42,18 @@ class ArtifactoryConnector(
   private val requestTimeout      = 5 minutes
   private val webstoreVirtualRepo = "webstore"
   private val webstoreLocalRepo   = "webstore-local"
+
+  def downloadAdditionalBinaries(binaryUrls: Seq[(String, String)]): Either[String, String] = {
+    val fileUrls = binaryUrls.map(p => (FileUrl(p._1), p._2))
+
+    val downloadResults: Seq[Either[String, String]] = fileUrls.map(url => fileDownloader.download(url._1, DestinationFileName(url._2)).bimap(
+      downloadError => s"Couldn't download artifact from ${url._1}. Cause: $downloadError\n",
+      _ => s"Successfully downloaded artifact from ${url._1}\n"))
+
+    downloadResults.foldLeft(Right(""):Either[String, String]){ (a, b) =>  b.combine(a)  }
+
+  }
+
 
   def downloadAppConfigBase(repositoryName: RepositoryName): Either[String, String] = {
 

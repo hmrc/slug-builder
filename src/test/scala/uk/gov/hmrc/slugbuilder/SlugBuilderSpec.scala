@@ -301,6 +301,9 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     when(artifactConnector.downloadJdk(jdkFileName))
       .thenReturn(Right(s"Successfully downloaded the JDK"))
 
+    when(artifactConnector.downloadAdditionalBinaries(Seq()))
+      .thenReturn(Right(""))
+
     when(tarArchiver.decompress(Paths.get("jdk.tgz"), slugDirectory.resolve(".jdk")))
       .thenReturn(Right("Successfully decompressed jdk.tgz"))
 

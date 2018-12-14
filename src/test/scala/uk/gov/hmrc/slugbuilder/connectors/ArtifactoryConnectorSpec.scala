@@ -144,6 +144,57 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     }
   }
 
+  "download additional binaries" should {
+    "preserve left error messages" in new Setup {
+
+      val fileUrl1 = artifactoryUri
+      val fileName1 = "newFile"
+      val fileUrl2 = artifactoryUri+"/fail"
+      val fileName2 = "newFile2"
+
+      val files = Seq((fileUrl1, fileName1), (fileUrl2, fileName2))
+
+      (fileDownloader
+        .download(_:FileUrl, _:DestinationFileName))
+        .expects(FileUrl(fileUrl1), DestinationFileName(fileName1))
+        .returning(Right("Successfully Downloaded"))
+
+      (fileDownloader
+        .download(_:FileUrl, _:DestinationFileName))
+        .expects(FileUrl(fileUrl2), DestinationFileName(fileName2))
+        .returning(Left(DownloadError("A file does not exist")))
+
+      connector.downloadAdditionalBinaries(files) shouldBe Left(
+        s"Couldn't download artifact from https://artifactory/fail. Cause: DownloadError(A file does not exist)\n"
+      )
+    }
+
+    "keep two success messages" in new Setup {
+
+      val fileUrl1 = artifactoryUri
+      val fileName1 = "newFile"
+      val fileUrl2 = artifactoryUri+"/new"
+      val fileName2 = "newFile2"
+
+      val files = Seq((fileUrl1, fileName1), (fileUrl2, fileName2))
+
+      (fileDownloader
+        .download(_:FileUrl, _:DestinationFileName))
+        .expects(FileUrl(fileUrl1), DestinationFileName(fileName1))
+        .returning(Right())
+
+      (fileDownloader
+        .download(_:FileUrl, _:DestinationFileName))
+        .expects(FileUrl(fileUrl2), DestinationFileName(fileName2))
+        .returning(Right())
+
+      connector.downloadAdditionalBinaries(files) shouldBe Right(
+        s"Successfully downloaded artifact from https://artifactory/new\nSuccessfully downloaded artifact from https://artifactory\n"
+      )
+
+    }
+  }
+
   "downloadArtifact" should {
 
     "return Right if artifact can be downloaded from Artifactory successfully" in new Setup {
@@ -343,6 +394,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       connector.unpublish(repositoryName, releaseVersion) shouldBe Left(
         s"Could not unpublish slug from $slugurl. Returned status 401")
     }
+
   }
 
   private trait Setup {
