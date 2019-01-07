@@ -59,3 +59,7 @@ case class ArtifactFileName(repositoryName: RepositoryName, releaseVersion: Rele
 case class AppConfigBaseFileName(repositoryName: RepositoryName) {
   override def toString: String = s"$repositoryName.conf"
 }
+
+case class SlugRuntimeJavaOpts(value : String) {
+  override def toString: String = value
+}
