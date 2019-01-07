@@ -32,6 +32,7 @@ object Main {
   private lazy val artifactoryUsername = EnvironmentVariables.artifactoryUsername.getOrExit
   private lazy val artifactoryPassword = EnvironmentVariables.artifactoryPassword.getOrExit
   private lazy val jdkFileName         = EnvironmentVariables.jdkFileName.getOrExit
+  private lazy val slugRuntimeJavaOpts = EnvironmentVariables.slugRuntimeJavaOpts
 
   private lazy implicit val system: ActorSystem    = ActorSystem()
   private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -64,7 +65,7 @@ object Main {
     (ArgParser.parse(args).getOrExit match {
       case Publish(repositoryName, releaseVersion) =>
         slugBuilder
-          .create(repositoryName, releaseVersion)
+          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts)
       case Unpublish(repositoryName, releaseVersion) =>
         artifactoryConnector
           .unpublish(repositoryName, releaseVersion)

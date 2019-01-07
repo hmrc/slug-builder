@@ -25,6 +25,7 @@ object EnvironmentVariables {
   val artifactoryPassword: Either[String, String] = findVariable("ARTIFACTORY_PASSWORD")
   val slugRunnerVersion: Either[String, String]   = findVariable("SLUG_RUNNER_VERSION")
   val jdkFileName: Either[String, String]         = findVariable("JDK_FILE_NAME")
+  val slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts]      = findVariable("SLUG_RUNTIME_JAVA_OPTS").toOption.map(SlugRuntimeJavaOpts)
 
   private def findVariable(name: String): Either[String, String] = Either.fromOption(
     sys.env.get(name),

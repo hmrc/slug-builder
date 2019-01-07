@@ -39,7 +39,7 @@ class SlugBuilder(
   private val startDockerPermissions =
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
-  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) = {
+  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts]) = {
 
     val artifact           = ArtifactFileName(repositoryName, releaseVersion)
     val jdk                = Paths.get("jdk.tgz")
@@ -59,7 +59,7 @@ class SlugBuilder(
       _ <- perform(createDir(slugDirectory)).leftMap(exception =>
             s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
       _ <- archiver.decompress(Paths.get(artifact.toString), slugDirectory) map printSuccess
-      _ <- startDockerScriptCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) map printSuccess
+      _ <- startDockerScriptCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, slugRuntimeJavaOpts) map printSuccess
       _ <- perform(setPermissions(startDockerFile, startDockerPermissions)).leftMap(exception =>
             s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
       _ <- perform(createFile(procFile, s"web: ./${startDockerFile.toFile.getName}", UTF_8, CREATE_NEW))

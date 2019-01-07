@@ -49,7 +49,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(startDockerShInWorkspace, startDockerSh)
         .returning(())
 
-      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe
         Right("Successfully copied start-docker.sh from the workspace to the slug")
     }
 
@@ -73,13 +73,49 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
       val startDockerContent = Seq(
         "#!/bin/sh",
         s"SCRIPT=$$(find . -type f -name $repositoryName)",
+
         s"exec $$SCRIPT $$HMRC_CONFIG -Dconfig.file=conf/${appConfigBase.toFile.getName}"
       )
       createFile
         .expects(startDockerSh, startDockerContent, UTF_8, CREATE_NEW)
         .returning(())
 
-      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe
+        Right("Successfully created new start-docker.sh script")
+    }
+
+    "create the 'conf' directory under 'slug', " +
+      "move app-config-base into it and " +
+      "create a new 'start-docker.sh'" +
+      "if the 'start-docker.sh' doesn't exist" +
+      "with custom JAVA_OPTS setting" in new Setup {
+
+      checkFileExist
+        .expects(startDockerShInWorkspace)
+        .returning(false)
+
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      move
+        .expects(appConfigBase, confDirectory resolve appConfigBase)
+        .returning(())
+
+      val slugRuntimeJavaOpts = "-Xmx256"
+
+      val startDockerContent = Seq(
+        "#!/bin/sh",
+        s"SCRIPT=$$(find . -type f -name $repositoryName)",
+        s"""export JAVA_OPTS="$$JAVA_OPTS $slugRuntimeJavaOpts"""",
+        s"exec $$SCRIPT $$HMRC_CONFIG -Dconfig.file=conf/${appConfigBase.toFile.getName}"
+      )
+      createFile
+        .expects(startDockerSh, startDockerContent, UTF_8, CREATE_NEW)
+        .returning(())
+
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName,
+        Some(SlugRuntimeJavaOpts(slugRuntimeJavaOpts))) shouldBe
         Right("Successfully created new start-docker.sh script")
     }
 
@@ -90,7 +126,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(startDockerShInWorkspace)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe Left(
         s"Couldn't check if $startDockerShInWorkspace exists. Cause: ${exception.getMessage}"
       )
     }
@@ -113,7 +149,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(startDockerShInWorkspace, startDockerSh)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe Left(
         s"Couldn't copy the $startDockerShInWorkspace script to the slug directory. Cause: $exception"
       )
     }
@@ -129,7 +165,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(confDirectory)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe Left(
         s"Couldn't create conf directory at $confDirectory. Cause: ${exception.getMessage}"
       )
     }
@@ -149,7 +185,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(appConfigBase, confDirectory resolve appConfigBase)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe Left(
         s"Couldn't move $appConfigBase to $confDirectory. Cause: $exception"
       )
     }
@@ -173,7 +209,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .expects(startDockerSh, *, *, *)
         .throwing(exception)
 
-      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName) shouldBe Left(
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe Left(
         s"Couldn't create $startDockerSh. Cause: $exception"
       )
     }

@@ -33,18 +33,21 @@ class StartDockerScriptCreator(
     Files.write(file, content, charset, openOption)) {
 
   def ensureStartDockerExists(
-    workspace: Path,
-    slugDirectory: Path,
-    repositoryName: RepositoryName): Either[String, String] = {
+                               workspace: Path,
+                               slugDirectory: Path,
+                               repositoryName: RepositoryName,
+                               slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts]): Either[String, String] = {
     val startDockerFileInWorkspace = workspace resolve Paths.get("start-docker.sh")
     val startDockerFileInSlug      = slugDirectory resolve Paths.get("start-docker.sh")
     val appConfigBase              = Paths.get(AppConfigBaseFileName(repositoryName).toString)
     val confDirectory              = slugDirectory resolve "conf"
     val startDockerContent = Seq(
       "#!/bin/sh",
-      s"SCRIPT=$$(find . -type f -name $repositoryName)",
+      s"SCRIPT=$$(find . -type f -name $repositoryName)"
+    ) ++
+      slugRuntimeJavaOpts.map(value =>  s"""export JAVA_OPTS="$$JAVA_OPTS $value"""") :+
       s"exec $$SCRIPT $$HMRC_CONFIG -Dconfig.file=${confDirectory.toFile.getName}/$appConfigBase"
-    )
+
 
     perform(existCheck(startDockerFileInWorkspace))
       .leftMap(exception => s"Couldn't check if $startDockerFileInWorkspace exists. Cause: ${exception.getMessage}")
