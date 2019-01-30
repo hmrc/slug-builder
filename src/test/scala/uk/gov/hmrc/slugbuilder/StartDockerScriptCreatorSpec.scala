@@ -71,7 +71,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
         .returning(())
 
       val startDockerContent = Seq(
-        "#!/bin/sh",
+        "#!/usr/bin/env sh",
         s"SCRIPT=$$(find . -type f -name $repositoryName)",
 
         s"exec $$SCRIPT $$HMRC_CONFIG -Dconfig.file=conf/${appConfigBase.toFile.getName}"
@@ -105,7 +105,7 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
       val slugRuntimeJavaOpts = "-Xmx256"
 
       val startDockerContent = Seq(
-        "#!/bin/sh",
+        "#!/usr/bin/env sh",
         s"SCRIPT=$$(find . -type f -name $repositoryName)",
         s"""export JAVA_OPTS="$$JAVA_OPTS $slugRuntimeJavaOpts"""",
         s"exec $$SCRIPT $$HMRC_CONFIG -Dconfig.file=conf/${appConfigBase.toFile.getName}"

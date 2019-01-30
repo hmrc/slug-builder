@@ -42,7 +42,7 @@ class StartDockerScriptCreator(
     val appConfigBase              = Paths.get(AppConfigBaseFileName(repositoryName).toString)
     val confDirectory              = slugDirectory resolve "conf"
     val startDockerContent = Seq(
-      "#!/bin/sh",
+      "#!/usr/bin/env sh",
       s"SCRIPT=$$(find . -type f -name $repositoryName)"
     ) ++
       slugRuntimeJavaOpts.map(value =>  s"""export JAVA_OPTS="$$JAVA_OPTS $value"""") :+
