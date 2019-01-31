@@ -18,6 +18,7 @@ package uk.gov.hmrc.slugbuilder.connectors
 
 import java.io.File
 import java.nio.file.{Files, Paths}
+
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
@@ -26,7 +27,8 @@ import play.api.libs.ws.{BodyWritable, StandaloneWSClient, WSAuthScheme}
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.{allHttpStatusCodes, nonEmptyStrings, releaseVersionGen, repositoryNameGen}
 import uk.gov.hmrc.slugbuilder.tools._
-import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, TestWSRequest}
+import uk.gov.hmrc.slugbuilder.{AdditionalBinary, AppConfigBaseFileName, ArtifactFileName, TestWSRequest}
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -147,17 +149,18 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
   "download additional binaries" should {
     "preserve left error messages" in new Setup {
 
-      val fileUrl1 = artifactoryUri
+      val fileUrl1 = artifactoryUri+"/newFile"
       val fileName1 = "newFile"
-      val fileUrl2 = artifactoryUri+"/fail"
+      val fileUrl2 = artifactoryUri+"/newFile2"
       val fileName2 = "newFile2"
 
-      val files = Seq((fileUrl1, fileName1), (fileUrl2, fileName2))
+      val files = Seq(AdditionalBinary(fileUrl1, Paths.get(fileName1)),
+                      AdditionalBinary(fileUrl2, Paths.get(fileName2)))
 
       (fileDownloader
         .download(_:FileUrl, _:DestinationFileName))
         .expects(FileUrl(fileUrl1), DestinationFileName(fileName1))
-        .returning(Right("Successfully Downloaded"))
+        .returning(Right())
 
       (fileDownloader
         .download(_:FileUrl, _:DestinationFileName))
@@ -165,18 +168,19 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(Left(DownloadError("A file does not exist")))
 
       connector.downloadAdditionalBinaries(files) shouldBe Left(
-        s"Couldn't download artifact from https://artifactory/fail. Cause: DownloadError(A file does not exist)\n"
+        s"Couldn't download artifact from https://artifactory/newFile2. Cause: DownloadError(A file does not exist)\n"
       )
     }
 
     "keep two success messages" in new Setup {
 
-      val fileUrl1 = artifactoryUri
+      val fileUrl1 = artifactoryUri+"/newFile"
       val fileName1 = "newFile"
-      val fileUrl2 = artifactoryUri+"/new"
+      val fileUrl2 = artifactoryUri+"/newFile2"
       val fileName2 = "newFile2"
 
-      val files = Seq((fileUrl1, fileName1), (fileUrl2, fileName2))
+      val files = Seq(AdditionalBinary(fileUrl1, Paths.get(fileName1)),
+                      AdditionalBinary(fileUrl2, Paths.get(fileName2)))
 
       (fileDownloader
         .download(_:FileUrl, _:DestinationFileName))
@@ -189,7 +193,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .returning(Right())
 
       connector.downloadAdditionalBinaries(files) shouldBe Right(
-        s"Successfully downloaded artifact from https://artifactory/new\nSuccessfully downloaded artifact from https://artifactory\n"
+        s"Successfully downloaded artifact from https://artifactory/newFile\nSuccessfully downloaded artifact from https://artifactory/newFile2\n"
       )
 
     }

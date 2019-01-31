@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import java.nio.file.{Path, Paths}
+
 import cats.implicits._
 
 case class RepositoryName private (value: String) {
@@ -62,4 +64,9 @@ case class AppConfigBaseFileName(repositoryName: RepositoryName) {
 
 case class SlugRuntimeJavaOpts(value : String) {
   override def toString: String = value
+}
+
+case class AdditionalBinary(fileUrl:String, extractedPath:Path){
+  def pathToFile:Path = Paths.get(fileUrl).getFileName
+  def fileName:String = pathToFile.toString
 }

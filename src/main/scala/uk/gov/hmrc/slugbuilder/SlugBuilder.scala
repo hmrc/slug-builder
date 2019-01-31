@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.net.URL
 import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.{Path, Paths}
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission._
+import java.nio.file.{Path, Paths}
 
 import cats.implicits._
 import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
@@ -41,7 +40,7 @@ class SlugBuilder(
   private val startDockerPermissions =
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
-  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts], additionalBinaries:Seq[(String, String)] = Seq()) = {
+  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts], additionalBinaries:Seq[AdditionalBinary] = Seq()) = {
 
     val artifact           = ArtifactFileName(repositoryName, releaseVersion)
     val jdk                = Paths.get("jdk.tgz")
@@ -78,11 +77,14 @@ class SlugBuilder(
             .map(_ => printSuccess(s"Successfully created .profile.d/java.sh"))
       _ <- perform(createDir(bin)).leftMap(exception => s"Couldn't create the bin folder. Cause: ${exception.getMessage}")
       _ <- downloadAdditionalBinaries(additionalBinaries) map printSuccess
-      _ <- additionalBinaries.map(p => Paths.get(p._2)).filter(fileUtils.isTar)
-        .map(p => archiver.decompress(p, p))
+      _ <- additionalBinaries.collect{case p:AdditionalBinary if fileUtils.isTar(p.pathToFile) && fileUtils.isGZipped(p.pathToFile) =>
+                                        archiver.decompress(p.pathToFile, p.extractedPath, stripLeadComponent = true)
+                                      case l:AdditionalBinary if fileUtils.isTar(l.pathToFile) =>
+                                        archiver.decompressNotGZipped(l.pathToFile, l.extractedPath, stripLeadComponent = true)
+                                      }
         .foldLeft(Right(""):Either[String, String]){ (a, b) =>  b.combine(a)  } map printSuccess
       _ <- archiver.compress(slugTgzFile, slugDirectory) map printSuccess
-      /*_ <- artifactoryConnector.publish(repositoryName, releaseVersion) map printSuccess*/
+      _ <- artifactoryConnector.publish(repositoryName, releaseVersion) map printSuccess
     } yield ()
   }.leftMap(printError)
 

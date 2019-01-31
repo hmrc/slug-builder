@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import java.nio.file.Paths
+
 import org.scalatest.{Matchers, WordSpec}
 import uk.gov.hmrc.slugbuilder.ArgParser.{Publish, Unpublish}
+
 import scala.language.implicitConversions
 
 class ArgParserSpec extends WordSpec with Matchers {
@@ -36,6 +39,15 @@ class ArgParserSpec extends WordSpec with Matchers {
         Unpublish(
           repositoryName = RepositoryName("repoName"),
           releaseVersion = ReleaseVersion("0.1.0")
+        ))
+    }
+
+    "marshall pairs of arguments correctly" in {
+      ArgParser.parse("publish repoName 0.1.0 url filename") shouldBe Right(
+        Publish(
+          repositoryName = RepositoryName("repoName"),
+          releaseVersion = ReleaseVersion("0.1.0"),
+          additionalBinaries = List(AdditionalBinary("url", Paths.get("filename")))
         ))
     }
 

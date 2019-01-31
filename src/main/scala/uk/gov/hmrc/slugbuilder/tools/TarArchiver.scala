@@ -21,13 +21,24 @@ import cats.implicits._
 
 class TarArchiver(cliTools: CliTools) {
 
-  def decompress(tgzFile: Path, outputDirectory: Path, preservePermissions: Boolean = true): Either[String, String] =
+  def decompress(tgzFile: Path, outputDirectory: Path, preservePermissions: Boolean = true, stripLeadComponent:Boolean = false): Either[String, String] =
+  {
     cliTools
-      .run(Array("tar", if (preservePermissions) "-pxzf" else "-xzf", tgzFile.toString, "-C", outputDirectory.toString))
+      .run(Array("tar", if (preservePermissions) "-pxzf" else "-xzf", tgzFile.toString, "-C", outputDirectory.toString, if(stripLeadComponent) "--strip-components=1" else ""))
       .bimap(
         error => s"Couldn't decompress $tgzFile. Cause: $error",
         _ => s"Successfully decompressed $tgzFile"
-      )
+      )}
+
+  def decompressNotGZipped(tgzFile: Path, outputDirectory: Path, preservePermissions: Boolean = true, stripLeadComponent:Boolean = false): Either[String, String] =
+  {
+    cliTools
+      .run(Array("tar", if (preservePermissions) "-pxf" else "-xf", tgzFile.toString, "-C", outputDirectory.toString, if(stripLeadComponent) "--strip-components=1" else ""))
+      .bimap(
+        error => s"Couldn't decompress $tgzFile. Cause: $error",
+        _ => s"Successfully decompressed $tgzFile"
+      )}
+
 
   def compress(tgzFile: Path, inputDirectory: Path): Either[String, String] =
     cliTools

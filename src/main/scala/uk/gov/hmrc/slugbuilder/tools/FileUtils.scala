@@ -32,6 +32,13 @@ class FileUtils {
     Files.write(file, Seq(content), charset, openOption)
 
   def isTar(file: Path):Boolean = {
-     file.getFileName.endsWith("tar") || file.getFileName.endsWith("tar.gz")
+    val fileNameString = file.getFileName.toString
+    fileNameString.endsWith("tar") || fileNameString.endsWith("tar.gz") || fileNameString.endsWith("tgz") ||
+      fileNameString.endsWith("tar.xz")
+  }
+
+  def isGZipped(file: Path):Boolean = {
+    val fileNameString = file.getFileName.toString
+    fileNameString.endsWith("tar") || fileNameString.endsWith("tar.gz") || fileNameString.endsWith("tgz")
   }
 }

@@ -15,7 +15,7 @@
  */
 
 package uk.gov.hmrc.slugbuilder.connectors
-import java.net.URL
+import java.net.{URI, URL}
 import java.nio.file.Paths
 
 import cats.implicits._
@@ -43,14 +43,15 @@ class ArtifactoryConnector(
   private val webstoreVirtualRepo = "webstore"
   private val webstoreLocalRepo   = "webstore-local"
 
-  def downloadAdditionalBinaries(binaryUrls: Seq[(String, String)]): Either[String, String] = {
-    val fileUrls = binaryUrls.map(p => (FileUrl(p._1), p._2))
+  def downloadAdditionalBinaries(binaryUrls: Seq[AdditionalBinary]): Either[String, String] = {
 
-    val downloadResults: Seq[Either[String, String]] = fileUrls.map(url => fileDownloader.download(url._1, DestinationFileName(url._2)).bimap(
+    val fileUrls = binaryUrls.map(p => (FileUrl(p.fileUrl), DestinationFileName(p.fileName)))
+
+    val downloadResults: Seq[Either[String, String]] = fileUrls.map(url => fileDownloader.download(url._1, url._2).bimap(
       downloadError => s"Couldn't download artifact from ${url._1}. Cause: $downloadError\n",
       _ => s"Successfully downloaded artifact from ${url._1}\n"))
 
-    downloadResults.foldLeft(Right(""):Either[String, String]){ (a, b) =>  b.combine(a)  }
+    downloadResults.foldLeft(Right(""):Either[String, String]){ (a, b) =>  a.combine(b)  }
 
   }
 
