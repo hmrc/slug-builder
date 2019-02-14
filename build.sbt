@@ -27,7 +27,13 @@ val compileDependencies = Seq(
   "org.eclipse.jgit"   % "org.eclipse.jgit"        % "4.11.0.201803080745-r",
   "org.slf4j"          % "slf4j-api"               % "1.7.25",
   "org.slf4j"          % "slf4j-log4j12"           % "1.7.25",
-  "org.typelevel"      %% "cats-core"              % "1.0.1"
+  "org.typelevel"      %% "cats-core"              % "1.0.1",
+  // force dependencies due to security flaws found in jackson-databind < 2.9.x using XRay
+  "com.fasterxml.jackson.core"     % "jackson-core"            % "2.9.7",
+  "com.fasterxml.jackson.core"     % "jackson-databind"        % "2.9.7",
+  "com.fasterxml.jackson.core"     % "jackson-annotations"     % "2.9.7",
+  "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8"   % "2.9.7",
+  "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.9.7"
 )
 
 val testDependencies = Seq(
