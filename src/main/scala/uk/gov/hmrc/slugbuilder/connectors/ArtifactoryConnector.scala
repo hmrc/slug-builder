@@ -15,12 +15,14 @@
  */
 
 package uk.gov.hmrc.slugbuilder.connectors
-import java.nio.file.Paths
+import java.nio.file.{Files, Paths}
+
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import uk.gov.hmrc.slugbuilder._
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -64,17 +66,39 @@ class ArtifactoryConnector(
   }
 
   def downloadArtifact(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
+    val artifactFileName = ArtifactFileName(repositoryName, releaseVersion)
 
-    val fileUrl = FileUrl(
-      s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
-    )
+    def fileUrl(scalaVersion: ScalaVersion) =
+      FileUrl(s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz")
 
-    fileDownloader
-      .download(fileUrl, DestinationFileName(ArtifactFileName(repositoryName, releaseVersion).toString))
-      .bimap(
-        downloadError => s"Artifact couldn't be downloaded from $fileUrl. Cause: $downloadError",
-        _ => s"Successfully downloaded artifact from $fileUrl"
-      )
+    def targetFileName(scalaVersion: ScalaVersion) = DestinationFileName(s"${artifactFileName}_${scalaVersion}")
+
+    def loop(outcome: Either[String, String], scalaVersions: List[ScalaVersion]): Either[String, String] = {
+      (outcome, scalaVersions) match {
+        case (prev@Right(msg), scalaVersion :: tail) =>
+          val url = fileUrl(scalaVersion)
+          val targetFile = targetFileName(scalaVersion)
+          fileDownloader.download(url, targetFile) match {
+            case Left(_) =>
+              loop(prev, tail)
+            case Right(_) =>
+              Left(s"Multiple version of scala artifact match - also in $scalaVersion. Caused by $prev")
+          }
+        case (Left(_), scalaVersion :: tail) =>
+          val target = targetFileName(scalaVersion)
+          val url = fileUrl(scalaVersion)
+          fileDownloader.download(url, target) match {
+            case Left(error) =>
+              loop(Left(s"Artifact couldn't be downloaded from $url. Cause: $error"), tail)
+            case Right(_) =>
+              Files.move(Paths.get(target.toString), Paths.get(artifactFileName.toString))
+              loop(Right(s"Successfully downloaded artifact from $url"), tail)
+          }
+
+        case (prev, Nil) => prev
+      }
+    }
+    loop(Left[String, String]("There are no scala version to check for download"), ScalaVersions.all)
   }
 
   private def slugUrl(webstoreRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
