@@ -95,9 +95,11 @@ class ArtifactoryConnector(
               loop(Right(s"Successfully downloaded artifact from $url"), tail)
           }
 
-        case (Left(errors), Nil) => Left("Could not find artifact: Caused by" + errors.mkString("\n\t", "\n\t", "\n"))
+        case (Left(errors), Nil) =>
+          Left("Could not find artifact. Caused by" + errors.mkString("\n\t", "\n\t", "\n"))
 
-        case (Right(message), Nil) => Right(message)
+        case (Right(message), Nil) =>
+          Right(message)
       }
     }
     loop(Left(Seq.empty), ScalaVersions.all)

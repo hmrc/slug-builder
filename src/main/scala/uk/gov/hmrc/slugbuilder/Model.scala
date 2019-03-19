@@ -69,6 +69,8 @@ case class ScalaVersion(value: String) {
 }
 
 object ScalaVersions {
+  val v2_13 = ScalaVersion("2.13")
+
   val v2_12 = ScalaVersion("2.12")
 
   val v2_11 = ScalaVersion("2.11")
@@ -76,6 +78,6 @@ object ScalaVersions {
   /**
     * This list require to have older version in later positions
     */
-  val all = List(v2_12, v2_11)
+  val all = List(v2_13, v2_12, v2_11)
 
 }
