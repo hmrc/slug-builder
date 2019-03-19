@@ -73,7 +73,7 @@ class ArtifactoryConnector(
 
     def targetFileName(scalaVersion: ScalaVersion) = DestinationFileName(s"${artifactFileName}_${scalaVersion}")
 
-    def loop(outcome: Either[String, String], scalaVersions: List[ScalaVersion]): Either[String, String] = {
+    def loop(outcome: Either[Seq[String], String], scalaVersions: List[ScalaVersion]): Either[String, String] = {
       (outcome, scalaVersions) match {
         case (prev@Right(msg), scalaVersion :: tail) =>
           val url = fileUrl(scalaVersion)
@@ -84,21 +84,23 @@ class ArtifactoryConnector(
             case Right(_) =>
               Left(s"Multiple version of scala artifact match - also in $scalaVersion. Caused by $prev")
           }
-        case (Left(_), scalaVersion :: tail) =>
+        case (Left(errors), scalaVersion :: tail) =>
           val target = targetFileName(scalaVersion)
           val url = fileUrl(scalaVersion)
           fileDownloader.download(url, target) match {
             case Left(error) =>
-              loop(Left(s"Artifact couldn't be downloaded from $url. Cause: $error"), tail)
+              loop(Left(errors :+ s"Artifact couldn't be downloaded from $url. Cause: $error"), tail)
             case Right(_) =>
               Files.move(Paths.get(target.toString), Paths.get(artifactFileName.toString))
               loop(Right(s"Successfully downloaded artifact from $url"), tail)
           }
 
-        case (prev, Nil) => prev
+        case (Left(errors), Nil) => Left("Could not find artifact: Caused by" + errors.mkString("\n\t", "\n\t", "\n"))
+
+        case (Right(message), Nil) => Right(message)
       }
     }
-    loop(Left[String, String]("There are no scala version to check for download"), ScalaVersions.all)
+    loop(Left(Seq.empty), ScalaVersions.all)
   }
 
   private def slugUrl(webstoreRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
