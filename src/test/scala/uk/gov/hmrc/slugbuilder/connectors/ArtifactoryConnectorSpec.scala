@@ -34,7 +34,7 @@ import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, ScalaVe
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutures with Matchers with BeforeAndAfter with EitherValues {
+class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutures with Matchers with BeforeAndAfterAll with EitherValues {
 
   "verifySlugNotCreatedYet" should {
 
@@ -403,8 +403,8 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
 
   var files: List[Path] = Nil
 
-  override protected def after(fun: => Any)(implicit pos: Position): Unit = {
+  override protected def afterAll(): Unit = {
     files.foreach(Files.deleteIfExists)
-    super.after(fun)
+    super.afterAll()
   }
 }
