@@ -23,6 +23,7 @@ import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import uk.gov.hmrc.slugbuilder._
 
+import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -73,6 +74,7 @@ class ArtifactoryConnector(
 
     def targetFileName(scalaVersion: ScalaVersion) = DestinationFileName(s"${artifactFileName}_${scalaVersion}")
 
+    @tailrec
     def loop(outcome: Either[Seq[String], String], scalaVersions: List[ScalaVersion]): Either[String, String] = {
       (outcome, scalaVersions) match {
         case (prev@Right(msg), scalaVersion :: tail) =>
@@ -82,7 +84,7 @@ class ArtifactoryConnector(
             case Left(_) =>
               loop(prev, tail)
             case Right(_) =>
-              Left(s"Multiple version of scala artifact match - also in $scalaVersion. Caused by $prev")
+              Left(s"Multiple artifact versions found - also in $scalaVersion. Caused by $prev")
           }
         case (Left(errors), scalaVersion :: tail) =>
           val target = targetFileName(scalaVersion)

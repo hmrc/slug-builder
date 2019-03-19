@@ -17,20 +17,24 @@
 package uk.gov.hmrc.slugbuilder.connectors
 
 import java.io.File
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
+
+import org.scalactic.source.Position
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest._
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws.{BodyWritable, StandaloneWSClient, WSAuthScheme}
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.{allHttpStatusCodes, nonEmptyStrings, releaseVersionGen, repositoryNameGen}
 import uk.gov.hmrc.slugbuilder.tools._
-import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, TestWSRequest}
+import uk.gov.hmrc.slugbuilder.ScalaVersions._
+import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, ScalaVersion, TestWSRequest}
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutures with Matchers {
+class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutures with Matchers with BeforeAndAfter with EitherValues {
 
   "verifySlugNotCreatedYet" should {
 
@@ -146,34 +150,37 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
 
   "downloadArtifact" should {
 
-    "return Right if artifact can be downloaded from Artifactory successfully" in new Setup {
-      val fileUrl = FileUrl(
-        s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
-      )
-      val destinationFileName = DestinationFileName(ArtifactFileName(repositoryName, releaseVersion).toString)
-      (fileDownloader
-        .download(_: FileUrl, _: DestinationFileName))
-        .expects(fileUrl, destinationFileName)
-        .returning(Right())
+    val fileNotFound = Left[DownloadError, Unit](DownloadError("A file does not exist"))
 
-      connector.downloadArtifact(repositoryName, releaseVersion) shouldBe
-        Right(s"Successfully downloaded artifact from $fileUrl")
+    "return Right if artifact can be downloaded from Artifactory successfully" in new Setup {
+      stubArtifactDownload(v2_13, fileNotFound)
+      stubArtifactDownload(v2_12, fileNotFound)
+      val fileUrl = stubArtifactDownload(v2_11, Right())
+
+      connector.downloadArtifact(repositoryName, releaseVersion).right.value should include(s"Successfully downloaded artifact from $fileUrl")
+    }
+
+    "return Left if there is no artifact" in new Setup {
+      stubArtifactDownload(v2_13, fileNotFound)
+      stubArtifactDownload(v2_12, fileNotFound)
+      stubArtifactDownload(v2_11, fileNotFound)
+      connector.downloadArtifact(repositoryName, releaseVersion).left.value should include("Could not find artifact.")
+    }
+
+    "return Left if more then one " in new Setup {
+      stubArtifactDownload(v2_13, Right())
+      stubArtifactDownload(v2_12, fileNotFound)
+      stubArtifactDownload(v2_11, Right())
+      connector.downloadArtifact(repositoryName, releaseVersion).left.value should include("Multiple artifact versions found")
     }
 
     "return Left if there was an error when downloading the artifact from Artifactory" in new Setup {
       val downloadingProblem = DownloadError("downloading problem")
-      val fileUrl = FileUrl(
-        s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
-      )
-      val destinationFileName = DestinationFileName(ArtifactFileName(repositoryName, releaseVersion).toString)
+      val fileUrl = stubArtifactDownload(v2_13, Left(downloadingProblem))
+      stubArtifactDownload(v2_12, fileNotFound)
+      stubArtifactDownload(v2_11, fileNotFound)
 
-      (fileDownloader
-        .download(_: FileUrl, _: DestinationFileName))
-        .expects(fileUrl, destinationFileName)
-        .returning(Left(downloadingProblem))
-
-      connector.downloadArtifact(repositoryName, releaseVersion) shouldBe
-        Left(s"Artifact couldn't be downloaded from $fileUrl. Cause: $downloadingProblem")
+      connector.downloadArtifact(repositoryName, releaseVersion).left.value should include("downloading problem")
     }
   }
 
@@ -373,5 +380,31 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     val wsRequest  = mock[TestWSRequest]
     val wsResponse = mock[wsRequest.Response]
 
+    def stubArtifactDownload(scalaVersion: ScalaVersion, outcome: Either[DownloadError, Unit]): FileUrl = {
+      val fileUrl = FileUrl(
+        s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz"
+      )
+      val artifactName = ArtifactFileName(repositoryName, releaseVersion).toString
+      val destinationFileName = DestinationFileName(artifactName + "_" + scalaVersion)
+      (fileDownloader
+        .download(_: FileUrl, _: DestinationFileName))
+        .expects(fileUrl, destinationFileName)
+        .onCall { (_, destinationFile) =>
+          outcome match {
+            case outcome: Right[DownloadError, Unit] =>
+              files = Paths.get(artifactName) :: Files.createFile(Paths.get(destinationFile.toString)) :: files
+              outcome
+            case _ => outcome
+          }
+        }
+      fileUrl
+    }
+  }
+
+  var files: List[Path] = Nil
+
+  override protected def after(fun: => Any)(implicit pos: Position): Unit = {
+    files.foreach(Files.deleteIfExists)
+    super.after(fun)
   }
 }
