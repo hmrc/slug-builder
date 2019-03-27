@@ -54,7 +54,7 @@ class SlugBuilder(
 
     for {
       _ <- verifySlugNotCreatedYet(repositoryName, releaseVersion) map printSuccess
-      _ <- downloadArtifact(repositoryName, releaseVersion) map printSuccess
+      _ <- downloadArtifact(repositoryName, releaseVersion, artifact) map printSuccess
       _ <- downloadAppConfigBase(repositoryName) map printSuccess
       _ <- perform(createDir(slugDirectory)).leftMap(exception =>
             s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")

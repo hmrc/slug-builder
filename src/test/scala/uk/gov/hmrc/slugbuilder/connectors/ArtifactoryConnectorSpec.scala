@@ -157,21 +157,22 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       stubArtifactDownload(v2_12, fileNotFound)
       val fileUrl = stubArtifactDownload(v2_11, Right())
 
-      connector.downloadArtifact(repositoryName, releaseVersion).right.value should include(s"Successfully downloaded artifact from $fileUrl")
+
+      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).right.value should include(s"Successfully downloaded artifact from $fileUrl")
     }
 
     "return Left if there is no artifact" in new Setup {
       stubArtifactDownload(v2_13, fileNotFound)
       stubArtifactDownload(v2_12, fileNotFound)
       stubArtifactDownload(v2_11, fileNotFound)
-      connector.downloadArtifact(repositoryName, releaseVersion).left.value should include("Could not find artifact.")
+      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).left.value should include("Could not find artifact.")
     }
 
     "return Left if more then one " in new Setup {
       stubArtifactDownload(v2_13, Right())
       stubArtifactDownload(v2_12, fileNotFound)
       stubArtifactDownload(v2_11, Right())
-      connector.downloadArtifact(repositoryName, releaseVersion).left.value should include("Multiple artifact versions found")
+      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).left.value should include("Multiple artifact versions found")
     }
 
     "return Left if there was an error when downloading the artifact from Artifactory" in new Setup {
@@ -180,7 +181,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       stubArtifactDownload(v2_12, fileNotFound)
       stubArtifactDownload(v2_11, fileNotFound)
 
-      connector.downloadArtifact(repositoryName, releaseVersion).left.value should include("downloading problem")
+      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).left.value should include("downloading problem")
     }
   }
 
@@ -363,7 +364,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     val releaseVersion       = releaseVersionGen.generateOne
     val jdkFileName          = "jdk.tgz"
     val slugArtifactFilename = s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
-
+    val targetFile = ArtifactFileName(repositoryName, releaseVersion)
     val progressReporter = new ProgressReporterStub
 
     val fileDownloader = mock[FileDownloader]
@@ -388,7 +389,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       val destinationFileName = DestinationFileName(artifactName + "_" + scalaVersion)
       (fileDownloader
         .download(_: FileUrl, _: DestinationFileName))
-        .expects(fileUrl, destinationFileName)
+        .expects(fileUrl, *)
         .onCall { (_, destinationFile) =>
           outcome match {
             case outcome: Right[DownloadError, Unit] =>

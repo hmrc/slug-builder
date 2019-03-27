@@ -66,45 +66,29 @@ class ArtifactoryConnector(
       )
   }
 
-  def downloadArtifact(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
-    val artifactFileName = ArtifactFileName(repositoryName, releaseVersion)
+  def downloadArtifact(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, targetFile : ArtifactFileName): Either[String, String] = {
 
-    def fileUrl(scalaVersion: ScalaVersion) =
-      FileUrl(s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz")
+    case class DownloadResult(scalaVersion: ScalaVersion, fileLocation : DestinationFileName, downloadUrl : FileUrl, outcome : Either[DownloadError, Unit])
 
-    def targetFileName(scalaVersion: ScalaVersion) = DestinationFileName(s"${artifactFileName}_${scalaVersion}")
-
-    @tailrec
-    def loop(outcome: Either[Seq[String], String], scalaVersions: List[ScalaVersion]): Either[String, String] = {
-      (outcome, scalaVersions) match {
-        case (prev@Right(msg), scalaVersion :: tail) =>
-          val url = fileUrl(scalaVersion)
-          val targetFile = targetFileName(scalaVersion)
-          fileDownloader.download(url, targetFile) match {
-            case Left(_) =>
-              loop(prev, tail)
-            case Right(_) =>
-              Left(s"Multiple artifact versions found - also in $scalaVersion. Caused by $prev")
-          }
-        case (Left(errors), scalaVersion :: tail) =>
-          val target = targetFileName(scalaVersion)
-          val url = fileUrl(scalaVersion)
-          fileDownloader.download(url, target) match {
-            case Left(error) =>
-              loop(Left(errors :+ s"Artifact couldn't be downloaded from $url. Cause: $error"), tail)
-            case Right(_) =>
-              Files.move(Paths.get(target.toString), Paths.get(artifactFileName.toString))
-              loop(Right(s"Successfully downloaded artifact from $url"), tail)
-          }
-
-        case (Left(errors), Nil) =>
-          Left("Could not find artifact. Caused by" + errors.mkString("\n\t", "\n\t", "\n"))
-
-        case (Right(message), Nil) =>
-          Right(message)
-      }
+    val downloadOutcomes = for (scalaVersion <- ScalaVersions.all) yield {
+      val downloadUrl =
+        FileUrl(s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz")
+      val fileLocation = DestinationFileName(s"${repositoryName}_${scalaVersion}")
+      DownloadResult(scalaVersion, fileLocation, downloadUrl, fileDownloader.download(downloadUrl, fileLocation))
     }
-    loop(Left(Seq.empty), ScalaVersions.all)
+
+    val (successfulDownloads, failedDownloads) = downloadOutcomes.partition(_.outcome.isRight)
+
+    successfulDownloads match {
+      case DownloadResult(_, fileLocation, url, _) :: Nil =>
+        Files.move(Paths.get(fileLocation.toString), Paths.get(targetFile.toString))
+        Right(s"Successfully downloaded artifact from $url")
+      case Nil =>
+        Left(s"Could not find artifact. Errors: ${failedDownloads.map(result => result.scalaVersion.toString + ":" + result.outcome.left.get.message).mkString(", ")}")
+      case items =>
+        Left(s"Multiple artifact versions found: ${items.map(_.scalaVersion).mkString(", ")}")
+    }
+
   }
 
   private def slugUrl(webstoreRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
