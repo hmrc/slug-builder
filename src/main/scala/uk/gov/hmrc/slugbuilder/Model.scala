@@ -63,3 +63,21 @@ case class AppConfigBaseFileName(repositoryName: RepositoryName) {
 case class SlugRuntimeJavaOpts(value : String) {
   override def toString: String = value
 }
+
+case class ScalaVersion(value: String) {
+  override def toString: String = value
+}
+
+object ScalaVersions {
+  val v2_13 = ScalaVersion("2.13")
+
+  val v2_12 = ScalaVersion("2.12")
+
+  val v2_11 = ScalaVersion("2.11")
+
+  /**
+    * This list require to have older version in later positions
+    */
+  val all = List(v2_13, v2_12, v2_11)
+
+}

@@ -15,12 +15,15 @@
  */
 
 package uk.gov.hmrc.slugbuilder.connectors
-import java.nio.file.Paths
+import java.nio.file.{Files, Paths}
+
 import cats.implicits._
 import play.api.libs.json.Json
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import uk.gov.hmrc.slugbuilder._
+
+import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -63,18 +66,29 @@ class ArtifactoryConnector(
       )
   }
 
-  def downloadArtifact(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
+  def downloadArtifact(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, targetFile : ArtifactFileName): Either[String, String] = {
 
-    val fileUrl = FileUrl(
-      s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_2.11/$releaseVersion/${repositoryName}_2.11-$releaseVersion.tgz"
-    )
+    case class DownloadResult(scalaVersion: ScalaVersion, fileLocation : DestinationFileName, downloadUrl : FileUrl, outcome : Either[DownloadError, Unit])
 
-    fileDownloader
-      .download(fileUrl, DestinationFileName(ArtifactFileName(repositoryName, releaseVersion).toString))
-      .bimap(
-        downloadError => s"Artifact couldn't be downloaded from $fileUrl. Cause: $downloadError",
-        _ => s"Successfully downloaded artifact from $fileUrl"
-      )
+    val downloadOutcomes = for (scalaVersion <- ScalaVersions.all) yield {
+      val downloadUrl =
+        FileUrl(s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz")
+      val fileLocation = DestinationFileName(s"${repositoryName}_${scalaVersion}")
+      DownloadResult(scalaVersion, fileLocation, downloadUrl, fileDownloader.download(downloadUrl, fileLocation))
+    }
+
+    val (successfulDownloads, failedDownloads) = downloadOutcomes.partition(_.outcome.isRight)
+
+    successfulDownloads match {
+      case DownloadResult(_, fileLocation, url, _) :: Nil =>
+        Files.move(Paths.get(fileLocation.toString), Paths.get(targetFile.toString))
+        Right(s"Successfully downloaded artifact from $url")
+      case Nil =>
+        Left(s"Could not find artifact. Errors: ${failedDownloads.map(result => result.scalaVersion.toString + ":" + result.outcome.left.get.message).mkString(", ")}")
+      case items =>
+        Left(s"Multiple artifact versions found: ${items.map(_.scalaVersion).mkString(", ")}")
+    }
+
   }
 
   private def slugUrl(webstoreRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =

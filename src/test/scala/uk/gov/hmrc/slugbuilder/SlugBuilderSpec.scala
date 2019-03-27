@@ -127,7 +127,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
       when(
         artifactConnector
-          .downloadArtifact(repositoryName, releaseVersion))
+          .downloadArtifact(repositoryName, releaseVersion, ArtifactFileName(repositoryName, releaseVersion)))
         .thenReturn(Left("Artifact does not exist"))
 
       slugBuilder.create(repositoryName, releaseVersion, None) should be('left)
@@ -285,7 +285,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
     when(
       artifactConnector
-        .downloadArtifact(repositoryName, releaseVersion))
+        .downloadArtifact(repositoryName, releaseVersion, ArtifactFileName(repositoryName, releaseVersion)))
       .thenReturn(Right("Artifact downloaded"))
 
     when(artifactConnector.downloadAppConfigBase(repositoryName))
