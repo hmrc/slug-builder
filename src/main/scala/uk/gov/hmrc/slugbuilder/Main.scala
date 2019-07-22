@@ -33,6 +33,7 @@ object Main {
   private lazy val artifactoryPassword = EnvironmentVariables.artifactoryPassword.getOrExit
   private lazy val jdkFileName         = EnvironmentVariables.jdkFileName.getOrExit
   private lazy val slugRuntimeJavaOpts = EnvironmentVariables.slugRuntimeJavaOpts
+  private val environmentVariables     = EnvironmentVariables.all
 
   private lazy implicit val system: ActorSystem    = ActorSystem()
   private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -59,17 +60,15 @@ object Main {
     new FileUtils()
   )
 
-  import progressReporter._
-
   def main(args: Array[String]): Unit =
     (ArgParser.parse(args).getOrExit match {
       case Publish(repositoryName, releaseVersion) =>
         slugBuilder
-          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts)
+          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables)
       case Unpublish(repositoryName, releaseVersion) =>
         artifactoryConnector
           .unpublish(repositoryName, releaseVersion)
-          .map(printSuccess)
+          .map(progressReporter.printSuccess)
     }).fold(
       _ => sys.exit(1),
       _ => sys.exit(0)
