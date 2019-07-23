@@ -75,6 +75,51 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
     }
 
+    "finishes successfully and does not copy sensitive environment variables to build.properties" in new Setup {
+
+      private val environmentVariables = Map(
+        "a"             -> "b",
+        "GITHUB_TOKEN"  -> "token",
+        "auth_password" -> "password",
+        "SECRET"        -> "secret",
+        "USERNAME"      -> "username",
+        "ACCESS_KEY"    -> "key"
+      )
+
+      slugBuilder.create(repositoryName, releaseVersion, None, environmentVariables) should be('right)
+
+      progressReporter.logs should contain("Slug does not exist")
+      progressReporter.logs should contain("Artifact downloaded")
+      progressReporter.logs should contain("app-config-base downloaded")
+      progressReporter.logs should contain("Successfully downloaded the JDK")
+      progressReporter.logs should contain("Successfully decompressed jdk.tgz")
+      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
+      progressReporter.logs should contain("Slug published successfully to https://artifactory/some-slug.tgz")
+      progressReporter.logs should contain("Successfully created .profile.d/java.sh")
+
+      verify(startDockerScriptCreator).ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None)
+
+      verify(fileUtils).createDir(slugDirectory)
+
+      verify(fileUtils)
+        .setPermissions(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+
+      verify(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
+
+      verify(fileUtils).createFile(buildPropertiesFile, "a=b", UTF_8, CREATE_NEW)
+
+      verify(fileUtils).createDir(slugDirectory.resolve(".jdk"))
+
+      val profileD: Path = slugDirectory.resolve(".profile.d")
+      verify(fileUtils).createDir(profileD)
+
+      val javaSh: Path = profileD resolve "java.sh"
+      verify(fileUtils)
+        .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
+    }
+
     "finish successfully if " +
       "slug for the given version of the microservice does not exist and " +
       "microservice artifact can be downloaded and " +

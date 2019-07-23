@@ -73,7 +73,8 @@ class SlugBuilder(
             s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
       _ <- perform(createFile(procFile, s"web: ./${startDockerFile.toFile.getName}", UTF_8, CREATE_NEW))
             .leftMap(exception => s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
-      _ <- perform(createFile(buildPropertiesFile, mapToString(buildProperties), UTF_8, CREATE_NEW))
+      _ <- perform(
+            createFile(buildPropertiesFile, mapToString(removeSensitiveProperties(buildProperties)), UTF_8, CREATE_NEW))
             .leftMap(exception => s"Couldn't create the $buildPropertiesFile. Cause: ${exception.getMessage}")
       _ <- perform(createDir(jdkDirectory)).leftMap(exception =>
             s"Couldn't create .jdk directory at $jdkDirectory. Cause: ${exception.getMessage}")
@@ -93,6 +94,13 @@ class SlugBuilder(
     buildProperties
       .map { case (k, v) => s"$k=$v" }
       .mkString("\n")
+
+  private def removeSensitiveProperties(properties: Map[String, String]): Map[String, String] = {
+    val sensitiveKeys = Seq("pass", "token", "user", "key", "secret")
+    properties.filterKeys { key =>
+      !sensitiveKeys.exists(key.toLowerCase.contains(_))
+    }
+  }
 
   private def createJavaSh(javaSh: Path): Unit =
     createFile(
