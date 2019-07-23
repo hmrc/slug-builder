@@ -27,20 +27,21 @@ import scala.language.postfixOps
 
 object Main {
 
-  private lazy val slugRunnerVersion   = EnvironmentVariables.slugRunnerVersion.getOrExit
-  private lazy val artifactoryUri      = EnvironmentVariables.artifactoryUri.getOrExit
-  private lazy val artifactoryUsername = EnvironmentVariables.artifactoryUsername.getOrExit
-  private lazy val artifactoryPassword = EnvironmentVariables.artifactoryPassword.getOrExit
-  private lazy val jdkFileName         = EnvironmentVariables.jdkFileName.getOrExit
-  private lazy val slugRuntimeJavaOpts = EnvironmentVariables.slugRuntimeJavaOpts
+  private val slugRunnerVersion    = EnvironmentVariables.slugRunnerVersion.getOrExit
+  private val artifactoryUri       = EnvironmentVariables.artifactoryUri.getOrExit
+  private val artifactoryUsername  = EnvironmentVariables.artifactoryUsername.getOrExit
+  private val artifactoryPassword  = EnvironmentVariables.artifactoryPassword.getOrExit
+  private val jdkFileName          = EnvironmentVariables.jdkFileName.getOrExit
+  private val slugRuntimeJavaOpts  = EnvironmentVariables.slugRuntimeJavaOpts
+  private val environmentVariables = EnvironmentVariables.all
 
-  private lazy implicit val system: ActorSystem    = ActorSystem()
-  private lazy implicit val mat: ActorMaterializer = ActorMaterializer()
+  private implicit val system: ActorSystem    = ActorSystem()
+  private implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  private lazy val progressReporter = new ProgressReporter()
-  private lazy val httpClient       = StandaloneAhcWSClient()
-  private lazy val fileDownloader   = new FileDownloader(httpClient)
-  private lazy val artifactoryConnector =
+  private val progressReporter = new ProgressReporter()
+  private val httpClient       = StandaloneAhcWSClient()
+  private val fileDownloader   = new FileDownloader(httpClient)
+  private val artifactoryConnector =
     new ArtifactoryConnector(
       httpClient,
       fileDownloader,
@@ -59,17 +60,15 @@ object Main {
     new FileUtils()
   )
 
-  import progressReporter._
-
   def main(args: Array[String]): Unit =
     (ArgParser.parse(args).getOrExit match {
       case Publish(repositoryName, releaseVersion) =>
         slugBuilder
-          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts)
+          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables)
       case Unpublish(repositoryName, releaseVersion) =>
         artifactoryConnector
           .unpublish(repositoryName, releaseVersion)
-          .map(printSuccess)
+          .map(progressReporter.printSuccess)
     }).fold(
       _ => sys.exit(1),
       _ => sys.exit(0)

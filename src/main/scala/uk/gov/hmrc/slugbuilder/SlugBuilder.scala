@@ -39,18 +39,23 @@ class SlugBuilder(
   private val startDockerPermissions =
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
-  def create(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts]) = {
+  def create(
+    repositoryName: RepositoryName,
+    releaseVersion: ReleaseVersion,
+    slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts],
+    buildProperties: Map[String, String]): Either[Unit, Unit] = {
 
-    val artifact           = ArtifactFileName(repositoryName, releaseVersion)
-    val jdk                = Paths.get("jdk.tgz")
-    val workspaceDirectory = Paths.get(".")
-    val slugDirectory      = Paths.get("slug")
-    val startDockerFile    = slugDirectory resolve Paths.get("start-docker.sh")
-    val procFile           = slugDirectory resolve Paths.get("Procfile")
-    val slugTgzFile        = Paths.get(artifactoryConnector.slugArtifactFileName(repositoryName, releaseVersion))
-    val jdkDirectory       = slugDirectory.resolve(".jdk")
-    val profileD           = slugDirectory.resolve(".profile.d")
-    val javaSh             = profileD.resolve("java.sh")
+    val artifact            = ArtifactFileName(repositoryName, releaseVersion)
+    val jdk                 = Paths.get("jdk.tgz")
+    val workspaceDirectory  = Paths.get(".")
+    val slugDirectory       = Paths.get("slug")
+    val startDockerFile     = slugDirectory resolve Paths.get("start-docker.sh")
+    val procFile            = slugDirectory resolve Paths.get("Procfile")
+    val buildPropertiesFile = slugDirectory resolve Paths.get("build.properties")
+    val slugTgzFile         = Paths.get(artifactoryConnector.slugArtifactFileName(repositoryName, releaseVersion))
+    val jdkDirectory        = slugDirectory.resolve(".jdk")
+    val profileD            = slugDirectory.resolve(".profile.d")
+    val javaSh              = profileD.resolve("java.sh")
 
     for {
       _ <- verifySlugNotCreatedYet(repositoryName, releaseVersion) map printSuccess
@@ -59,11 +64,17 @@ class SlugBuilder(
       _ <- perform(createDir(slugDirectory)).leftMap(exception =>
             s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
       _ <- archiver.decompress(Paths.get(artifact.toString), slugDirectory) map printSuccess
-      _ <- startDockerScriptCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, slugRuntimeJavaOpts) map printSuccess
+      _ <- startDockerScriptCreator.ensureStartDockerExists(
+            workspaceDirectory,
+            slugDirectory,
+            repositoryName,
+            slugRuntimeJavaOpts) map printSuccess
       _ <- perform(setPermissions(startDockerFile, startDockerPermissions)).leftMap(exception =>
             s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
       _ <- perform(createFile(procFile, s"web: ./${startDockerFile.toFile.getName}", UTF_8, CREATE_NEW))
             .leftMap(exception => s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
+      _ <- perform(createFile(buildPropertiesFile, mapToString(buildProperties), UTF_8, CREATE_NEW))
+            .leftMap(exception => s"Couldn't create the $buildPropertiesFile. Cause: ${exception.getMessage}")
       _ <- perform(createDir(jdkDirectory)).leftMap(exception =>
             s"Couldn't create .jdk directory at $jdkDirectory. Cause: ${exception.getMessage}")
       _ <- downloadJdk(jdk.toString) map printSuccess
@@ -77,6 +88,11 @@ class SlugBuilder(
       _ <- artifactoryConnector.publish(repositoryName, releaseVersion) map printSuccess
     } yield ()
   }.leftMap(printError)
+
+  private def mapToString(buildProperties: Map[String, String]): String =
+    buildProperties
+      .map { case (k, v) => s"$k=$v" }
+      .mkString("\n")
 
   private def createJavaSh(javaSh: Path): Unit =
     createFile(
