@@ -78,12 +78,13 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     "finishes successfully and does not copy sensitive environment variables to build.properties" in new Setup {
 
       private val environmentVariables = Map(
-        "a"             -> "b",
-        "GITHUB_TOKEN"  -> "token",
-        "auth_password" -> "password",
-        "SECRET"        -> "secret",
-        "USERNAME"      -> "username",
-        "ACCESS_KEY"    -> "key"
+        "a"                    -> "b",
+        "GITHUB_TOKEN"         -> "token",
+        "auth_password"        -> "password",
+        "SECRET"               -> "secret",
+        "USERNAME"             -> "username",
+        "ACCESS_KEY"           -> "key",
+        "HUDSON_SERVER_COOKIE" -> "cookie"
       )
 
       slugBuilder.create(repositoryName, releaseVersion, None, environmentVariables) should be('right)
