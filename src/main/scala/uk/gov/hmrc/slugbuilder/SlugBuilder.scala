@@ -96,7 +96,7 @@ class SlugBuilder(
       .mkString("\n")
 
   private def removeSensitiveProperties(properties: Map[String, String]): Map[String, String] = {
-    val sensitiveKeys = Seq("pass", "token", "user", "key", "secret")
+    val sensitiveKeys = Seq("pass", "token", "user", "key", "secret", "cookie")
     properties.filterKeys { key =>
       !sensitiveKeys.exists(key.toLowerCase.contains(_))
     }
