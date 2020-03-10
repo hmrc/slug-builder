@@ -11,13 +11,16 @@ This is a tool to be used in command line to create and publish *slug* artifacts
 
 # How to create and publish a slug?
 
-In order to make the tool working, following variables have to set in the running environment: 
-* JAVA_VERSION
-* ARTIFACTORY_URI
-* WEBSTORE_URI
-* SLUG_RUNNER_VERSION
-* GITHUB_API_USER
-* GITHUB_API_TOKEN
+The following environment variables have to be set:
+* `JAVA_VERSION`
+* `ARTIFACTORY_URI`
+* `WEBSTORE_URI`
+* `SLUG_RUNNER_VERSION`
+* `GITHUB_API_USER`
+* `GITHUB_API_TOKEN`
+
+The following environment variables are optional:
+* `INCLUDE_FILES` - a comma separed list of file paths to be included in the root of the slug
 
 Once the variables are set and a fat jar is created, slug can be built by issuing a command:
 

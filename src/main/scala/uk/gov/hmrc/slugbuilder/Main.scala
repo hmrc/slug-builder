@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import scala.language.postfixOps
 
 object Main {
 
+  private val progressReporter = new ProgressReporter()
+
   private val slugRunnerVersion    = EnvironmentVariables.slugRunnerVersion.getOrExit
   private val artifactoryUri       = EnvironmentVariables.artifactoryUri.getOrExit
   private val artifactoryUsername  = EnvironmentVariables.artifactoryUsername.getOrExit
@@ -34,11 +36,11 @@ object Main {
   private val jdkFileName          = EnvironmentVariables.jdkFileName.getOrExit
   private val slugRuntimeJavaOpts  = EnvironmentVariables.slugRuntimeJavaOpts
   private val environmentVariables = EnvironmentVariables.all
+  private val includeFiles         = EnvironmentVariables.includeFiles
 
   private implicit val system: ActorSystem    = ActorSystem()
   private implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  private val progressReporter = new ProgressReporter()
   private val httpClient       = StandaloneAhcWSClient()
   private val fileDownloader   = new FileDownloader(httpClient)
   private val artifactoryConnector =
@@ -64,7 +66,7 @@ object Main {
     (ArgParser.parse(args).getOrExit match {
       case Publish(repositoryName, releaseVersion) =>
         slugBuilder
-          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables)
+          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables, includeFiles)
       case Unpublish(repositoryName, releaseVersion) =>
         artifactoryConnector
           .unpublish(repositoryName, releaseVersion)
