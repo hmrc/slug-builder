@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,13 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       "app-config-base can be downloaded and " +
       "a slug file is assembled" in new Setup {
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map("a" -> "b", "c" -> "d")) should be('right)
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map("a" -> "b", "c" -> "d"),
+        includeFiles        = Some("path/file1")
+      ) should be('right)
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -65,12 +71,14 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
       verify(fileUtils).createFile(buildPropertiesFile, "a=b\nc=d", UTF_8, CREATE_NEW)
 
+      verify(fileUtils).copyFile(Paths.get("path/file1"), slugDirectory)
+
       verify(fileUtils).createDir(slugDirectory.resolve(".jdk"))
 
       val profileD: Path = slugDirectory.resolve(".profile.d")
       verify(fileUtils).createDir(profileD)
 
-      val javaSh: Path = profileD resolve "java.sh"
+      val javaSh: Path = profileD.resolve("java.sh")
       verify(fileUtils)
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
     }
@@ -87,7 +95,13 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         "HUDSON_SERVER_COOKIE" -> "cookie"
       )
 
-      slugBuilder.create(repositoryName, releaseVersion, None, environmentVariables) should be('right)
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts   = None,
+        environmentVariables,
+        includeFiles          = None
+      ) should be('right)
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -116,7 +130,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       val profileD: Path = slugDirectory.resolve(".profile.d")
       verify(fileUtils).createDir(profileD)
 
-      val javaSh: Path = profileD resolve "java.sh"
+      val javaSh: Path = profileD.resolve("java.sh")
       verify(fileUtils)
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
     }
@@ -132,7 +146,9 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         repositoryName,
         releaseVersion,
         Some(SlugRuntimeJavaOpts("-Xmx256")),
-        Map("a" -> "b", "c" -> "d")) should be('right)
+        buildProperties = Map("a" -> "b", "c" -> "d"),
+        includeFiles    = None
+      ) should be('right)
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -165,7 +181,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       val profileD: Path = slugDirectory.resolve(".profile.d")
       verify(fileUtils).createDir(profileD)
 
-      val javaSh: Path = profileD resolve "java.sh"
+      val javaSh: Path = profileD.resolve("java.sh")
       verify(fileUtils)
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
     }
@@ -174,8 +190,14 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       when(artifactConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
         .thenReturn(Left("Slug does exist"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain("Slug does exist")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain("Slug does exist")
     }
 
     "not create the slug if there is no artifact in the Artifactory" in new Setup {
@@ -185,8 +207,14 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
           .downloadArtifact(repositoryName, releaseVersion, ArtifactFileName(repositoryName, releaseVersion)))
         .thenReturn(Left("Artifact does not exist"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain("Artifact does not exist")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain("Artifact does not exist")
     }
 
     "not create the slug if there is app-config-base in the Webstore" in new Setup {
@@ -194,8 +222,14 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       when(artifactConnector.downloadAppConfigBase(repositoryName))
         .thenReturn(Left("app-config-base does not exist"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain("app-config-base does not exist")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain("app-config-base does not exist")
     }
 
     "return error message when slug directory cannot be created" in new Setup {
@@ -203,7 +237,13 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       val exception = new RuntimeException("exception message")
       doThrow(exception).when(fileUtils).createDir(slugDirectory)
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
       progressReporter.logs should contain(
         s"Couldn't create slug directory at ${slugDirectory.toFile.getName}. Cause: ${exception.getMessage}")
     }
@@ -212,8 +252,14 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       when(tarArchiver.decompress(artifactFile, slugDirectory))
         .thenReturn(Left("Some error"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain("Some error")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain("Some error")
     }
 
     "return error when start-docker.sh creation return left" in new Setup {
@@ -222,8 +268,14 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       when(startDockerScriptCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None))
         .thenReturn(Left(errorMessage))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain("error message")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain("error message")
     }
 
     "return error when start-docker.sh permissions cannot be changed" in new Setup {
@@ -234,7 +286,13 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
           startDockerFile,
           Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
       progressReporter.logs should contain(
         s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
     }
@@ -243,15 +301,27 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       val exception = new RuntimeException("exception message")
       doThrow(exception).when(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain(s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain(s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
     }
 
     "return error if creating the .jdk directory fails" in new Setup {
       val exception = new RuntimeException("exception message")
       doThrow(exception).when(fileUtils).createDir(slugDirectory.resolve(".jdk"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
       progressReporter.logs should contain(
         s"Couldn't create .jdk directory at $slugDirectory/.jdk. Cause: ${exception.getMessage}")
     }
@@ -260,8 +330,14 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       when(artifactConnector.downloadJdk(jdkFileName))
         .thenReturn(Left("Error downloading JDK"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain("Error downloading JDK")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain("Error downloading JDK")
     }
 
     "return error message when the JDK cannot be extracted" in new Setup {
@@ -269,33 +345,58 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
       when(tarArchiver.decompress(Paths.get(jdkFileName), slugDirectory.resolve(".jdk")))
         .thenReturn(Left("Some error"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain("Some error")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain("Some error")
     }
 
     "return error message when the Slug cannot be compressed" in new Setup {
       when(tarArchiver.compress(slugTgzFile, slugDirectory))
         .thenReturn(Left("Some error"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain(s"Some error")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain(s"Some error")
     }
 
     "return error message when the Slug cannot be published" in new Setup {
       when(artifactConnector.publish(repositoryName, releaseVersion))
         .thenReturn(Left("Some error"))
 
-      slugBuilder.create(repositoryName, releaseVersion, None, Map.empty) should be('left)
-      progressReporter.logs                                               should contain(s"Some error")
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map.empty,
+        includeFiles        = None
+      ) should be('left)
+      progressReporter.logs should contain(s"Some error")
     }
 
     "not catch fatal Errors" in new Setup {
       val error = new OutOfMemoryError("error")
       doThrow(error).when(fileUtils).createDir(slugDirectory)
 
-      intercept[Throwable](slugBuilder.create(repositoryName, releaseVersion, None, Map.empty)) shouldBe error
+      intercept[Throwable](
+        slugBuilder.create(
+          repositoryName,
+          releaseVersion,
+          slugRuntimeJavaOpts = None,
+          buildProperties     = Map.empty,
+          includeFiles        = None
+        )
+      ) shouldBe error
     }
-
   }
 
   private trait Setup {
@@ -304,9 +405,9 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
     val artifactFile        = Paths.get(ArtifactFileName(repositoryName, releaseVersion).toString)
     val workspaceDirectory  = Paths.get(".")
     val slugDirectory       = Paths.get("slug")
-    val startDockerFile     = slugDirectory resolve "start-docker.sh"
-    val procFile            = slugDirectory resolve "Procfile"
-    val buildPropertiesFile = slugDirectory resolve "build.properties"
+    val startDockerFile     = slugDirectory.resolve("start-docker.sh")
+    val procFile            = slugDirectory.resolve("Procfile")
+    val buildPropertiesFile = slugDirectory.resolve("build.properties")
     val slugRunnerVersion   = "0.5.2"
     val slugTgzFile         = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
 
