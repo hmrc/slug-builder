@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,9 @@ object EnvironmentVariables {
   val artifactoryPassword: Either[String, String] = findVariable("ARTIFACTORY_PASSWORD")
   val slugRunnerVersion: Either[String, String]   = findVariable("SLUG_RUNNER_VERSION")
   val jdkFileName: Either[String, String]         = findVariable("JDK_FILE_NAME")
+  val includeFiles: Option[String]                = all.get("INCLUDE_FILES")
   val slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts] =
-    findVariable("SLUG_RUNTIME_JAVA_OPTS").toOption.map(SlugRuntimeJavaOpts)
+    all.get("SLUG_RUNTIME_JAVA_OPTS").map(SlugRuntimeJavaOpts)
 
   private def findVariable(name: String): Either[String, String] = Either.fromOption(
     all.get(name),
