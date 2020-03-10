@@ -129,8 +129,8 @@ class SlugBuilder(
       CREATE_NEW
     )
 
-  private def copyFiles(fileCSV: Option[String], targetDirectory: Path): String =
-    fileCSV.
+  private def copyFiles(optFileCsv: Option[String], targetDirectory: Path): String =
+    optFileCsv.
       fold("No files to copy"){ fileCsv =>
         val files = fileCsv.split(",").map(Paths.get(_))
         files.map(fileUtils.copyFile(_, targetDirectory))
