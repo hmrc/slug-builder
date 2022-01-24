@@ -29,52 +29,59 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class ArtifactoryConnector(
-  wsClient: StandaloneWSClient,
-  fileDownloader: FileDownloader,
-  slugRunnerVersion: String,
-  artifactoryUri: String,
+  wsClient           : StandaloneWSClient,
+  fileDownloader     : FileDownloader,
+  slugRunnerVersion  : String,
+  artifactoryUri     : String,
   artifactoryUsername: String,
   artifactoryPassword: String,
-  jdkFileName: String,
-  progressReporter: ProgressReporter) {
-
+  jdkFileName        : String,
+  progressReporter   : ProgressReporter
+) {
   private val requestTimeout      = 5.minutes
   private val webstoreVirtualRepo = "webstore"
   private val webstoreLocalRepo   = "webstore-local"
 
   def downloadAppConfigBase(repositoryName: RepositoryName): Either[String, String] = {
-
     val fileUrl = FileUrl(s"$artifactoryUri/$webstoreVirtualRepo/app-config-base/$repositoryName.conf")
-
     fileDownloader
       .download(fileUrl, DestinationFileName(AppConfigBaseFileName(repositoryName).toString))
       .bimap(
         downloadError => s"app-config-base couldn't be downloaded from $fileUrl. Cause: $downloadError",
-        _ => s"Successfully downloaded app-config-base from $fileUrl"
+        _             => s"Successfully downloaded app-config-base from $fileUrl"
       )
   }
 
   def downloadJdk(targetFile: String): Either[String, String] = {
-
     val javaDownloadUri = FileUrl(s"$artifactoryUri/$webstoreVirtualRepo/java/$jdkFileName")
     fileDownloader
       .download(javaDownloadUri, DestinationFileName(targetFile))
       .bimap(
         downloadError => s"JDK couldn't be downloaded from $javaDownloadUri. Cause: $downloadError",
-        _ => s"Successfully downloaded JDK from $javaDownloadUri"
+        _             => s"Successfully downloaded JDK from $javaDownloadUri"
       )
   }
 
-  def downloadArtifact(repositoryName: RepositoryName, releaseVersion: ReleaseVersion, targetFile : ArtifactFileName): Either[String, String] = {
+  def downloadArtifact(
+    repositoryName: RepositoryName,
+    releaseVersion: ReleaseVersion,
+    targetFile    : ArtifactFileName
+  ): Either[String, String] = {
 
-    case class DownloadResult(scalaVersion: ScalaVersion, fileLocation : DestinationFileName, downloadUrl : FileUrl, outcome : Either[DownloadError, Unit])
+    case class DownloadResult(
+      scalaVersion : ScalaVersion,
+      fileLocation : DestinationFileName,
+      downloadUrl  : FileUrl,
+      outcome      : Either[DownloadError, Unit]
+    )
 
-    val downloadOutcomes = for (scalaVersion <- ScalaVersions.all) yield {
-      val downloadUrl =
-        FileUrl(s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz")
-      val fileLocation = DestinationFileName(s"${repositoryName}_${scalaVersion}")
-      DownloadResult(scalaVersion, fileLocation, downloadUrl, fileDownloader.download(downloadUrl, fileLocation))
-    }
+    val downloadOutcomes =
+      for (scalaVersion <- ScalaVersions.all) yield {
+        val downloadUrl =
+          FileUrl(s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz")
+        val fileLocation = DestinationFileName(s"${repositoryName}_${scalaVersion}")
+        DownloadResult(scalaVersion, fileLocation, downloadUrl, fileDownloader.download(downloadUrl, fileLocation))
+      }
 
     val (successfulDownloads, failedDownloads) = downloadOutcomes.partition(_.outcome.isRight)
 
@@ -98,7 +105,8 @@ class ArtifactoryConnector(
 
   def verifySlugNotCreatedYet(
     repositoryName: RepositoryName,
-    releaseVersion: ReleaseVersion): Either[String, String] = {
+    releaseVersion: ReleaseVersion
+  ): Either[String, String] = {
     val publishUrl = slugUrl(webstoreVirtualRepo, repositoryName, releaseVersion)
     Await.result(
       wsClient

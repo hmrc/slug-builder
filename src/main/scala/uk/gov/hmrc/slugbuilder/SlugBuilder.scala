@@ -40,11 +40,11 @@ class SlugBuilder(
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
   def create(
-    repositoryName: RepositoryName,
-    releaseVersion: ReleaseVersion,
+    repositoryName     : RepositoryName,
+    releaseVersion     : ReleaseVersion,
     slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts],
-    buildProperties: Map[String, String],
-    includeFiles: Option[String]
+    buildProperties    : Map[String, String],
+    includeFiles       : Option[String]
   ): Either[Unit, Unit] = {
 
     val artifact            = ArtifactFileName(repositoryName, releaseVersion)

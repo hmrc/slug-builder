@@ -48,7 +48,8 @@ object Main {
       artifactoryUsername,
       artifactoryPassword,
       jdkFileName,
-      progressReporter)
+      progressReporter
+    )
 
   private lazy val slugBuilder = new SlugBuilder(
     progressReporter,

@@ -33,18 +33,25 @@ object Generators {
       chars  <- Gen.listOfN(length, Gen.alphaNumChar)
     } yield chars.mkString
 
-  val nonEmptyStrings: Gen[String] = strings(minLength = 1, maxLength = 50)
+  val nonEmptyStrings: Gen[String] =
+    strings(minLength = 1, maxLength = 50)
 
-  val releaseVersions: Gen[String] = for {
-    majorVersion <- Gen.chooseNum(0, 100)
-    minorVersion <- Gen.chooseNum(0, 100)
-    patchVersion <- Gen.chooseNum(0, 100)
-  } yield s"$majorVersion.$minorVersion.$patchVersion"
+  val releaseVersions: Gen[String] =
+    for {
+      majorVersion <- Gen.chooseNum(0, 100)
+      minorVersion <- Gen.chooseNum(0, 100)
+      patchVersion <- Gen.chooseNum(0, 100)
+    } yield s"$majorVersion.$minorVersion.$patchVersion"
 
-  val repositoryNameGen: Gen[RepositoryName] = nonEmptyStrings.map(RepositoryName.apply)
-  val releaseVersionGen: Gen[ReleaseVersion] = releaseVersions.map(ReleaseVersion.apply)
+  val repositoryNameGen: Gen[RepositoryName] =
+    nonEmptyStrings.map(RepositoryName.apply)
 
-  val allHttpStatusCodes: Seq[Int] = (200 to 208) ++: (300 to 308) ++: (400 to 431) ++: (500 to 511)
+  val releaseVersionGen: Gen[ReleaseVersion] =
+    releaseVersions.map(ReleaseVersion.apply)
 
-  def httpStatusCodes(excluding: Int*): Gen[Int] = Gen.oneOf(allHttpStatusCodes filterNot excluding.contains)
+  val allHttpStatusCodes: Seq[Int] =
+    (200 to 208) ++: (300 to 308) ++: (400 to 431) ++: (500 to 511)
+
+  def httpStatusCodes(excluding: Int*): Gen[Int] =
+    Gen.oneOf(allHttpStatusCodes filterNot excluding.contains)
 }

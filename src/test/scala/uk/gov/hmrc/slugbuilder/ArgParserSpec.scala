@@ -57,5 +57,5 @@ class ArgParserSpec extends AnyWordSpec with Matchers {
   }
 
   private implicit def stringToArray(string: String): Array[String] =
-    Array(string.split(" "): _*)
+    string.split(" ").toArray
 }

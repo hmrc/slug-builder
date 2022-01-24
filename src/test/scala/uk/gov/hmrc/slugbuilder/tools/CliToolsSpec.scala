@@ -40,7 +40,6 @@ class CliToolsSpec extends AnyWordSpec with Matchers {
   }
 
   trait TestSetup {
-
     val progressReporter = new ProgressReporterStub()
   }
 }
