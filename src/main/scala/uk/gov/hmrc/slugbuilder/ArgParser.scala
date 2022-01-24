@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.implicits._
-
 object ArgParser {
 
   sealed trait Config {

@@ -43,7 +43,7 @@ case class DownloadError(message: String)
 
 class FileDownloader(wsClient: StandaloneWSClient)(implicit materializer: Materializer) {
 
-  private val requestTimeout = 5 minutes
+  private val requestTimeout = 5.minutes
 
   def download(fileUrl: FileUrl, destinationFileName: DestinationFileName): Either[DownloadError, Unit] =
     Await.result(
@@ -53,24 +53,20 @@ class FileDownloader(wsClient: StandaloneWSClient)(implicit materializer: Materi
         .get()
         .flatMap { response =>
           response.status match {
-            case 200    => response.toFile(destinationFileName.toString)
+            case 200    => toFile(response, destinationFileName.toString).map(_ => Right(()))
             case 404    => Future.successful(Left(DownloadError("A file does not exist")))
             case status => Future.successful(Left(DownloadError(s"Returned status $status")))
           }
         }
         .recover {
+          case e: akka.stream.IOOperationIncompleteException if e.getCause != null => Left(DownloadError(e.getCause.getMessage))
           case NonFatal(exception) => Left(DownloadError(exception.getMessage))
         },
       requestTimeout
     )
 
-  private implicit class ResponseOps(response: StandaloneWSResponse)(implicit materializer: Materializer) {
-    def toFile(fileName: String): Future[Either[DownloadError, Unit]] =
-      response.bodyAsSource
-        .runWith(FileIO.toPath(Paths.get(fileName)))
-        .map { ioResult =>
-          if (ioResult.wasSuccessful) Right(Unit)
-          else Left(DownloadError(ioResult.getError.getMessage))
-        }
-  }
+  private def toFile(response: StandaloneWSResponse, fileName: String): Future[Unit] =
+    response.bodyAsSource
+      .runWith(FileIO.toPath(Paths.get(fileName)))
+      .map(_ => ())
 }

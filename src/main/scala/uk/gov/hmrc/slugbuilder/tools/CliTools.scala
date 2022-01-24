@@ -38,7 +38,7 @@ class CliTools(progressReporter: ProgressReporter) {
       if (exitCode != 0) Left(s"got exit code $exitCode from command '${cmd.mkString(" ")}'") else Right(())
     }
 
-    Await.ready(cmdF, 2 minutes)
+    Await.ready(cmdF, 2.minutes)
 
     cmdF.value.get match {
       case Success(v) => v

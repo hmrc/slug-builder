@@ -23,7 +23,6 @@ import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import uk.gov.hmrc.slugbuilder._
 
-import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -39,7 +38,7 @@ class ArtifactoryConnector(
   jdkFileName: String,
   progressReporter: ProgressReporter) {
 
-  private val requestTimeout      = 5 minutes
+  private val requestTimeout      = 5.minutes
   private val webstoreVirtualRepo = "webstore"
   private val webstoreLocalRepo   = "webstore-local"
 
@@ -84,7 +83,7 @@ class ArtifactoryConnector(
         Files.move(Paths.get(fileLocation.toString), Paths.get(targetFile.toString))
         Right(s"Successfully downloaded artifact from $url")
       case Nil =>
-        Left(s"Could not find artifact. Errors: ${failedDownloads.map(result => result.scalaVersion.toString + ":" + result.outcome.left.get.message).mkString(", ")}")
+        Left(s"Could not find artifact. Errors: ${failedDownloads.map(result => result.scalaVersion.toString + ":" + result.outcome.swap.map(_.message).getOrElse("")).mkString(", ")}")
       case items =>
         Left(s"Multiple artifact versions found: ${items.map(_.scalaVersion).mkString(", ")}")
     }

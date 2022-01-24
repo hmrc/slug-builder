@@ -17,11 +17,11 @@
 package uk.gov.hmrc.slugbuilder.tools
 
 import java.nio.file.{Files, Path, Paths}
-import org.scalatest.Matchers._
-import org.scalatest.WordSpec
-import scala.collection.JavaConversions._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import scala.jdk.CollectionConverters._
 
-class TarArchiverSpec extends WordSpec {
+class TarArchiverSpec extends AnyWordSpec with Matchers {
 
   "archiver" should {
 
@@ -51,20 +51,21 @@ class TarArchiverSpec extends WordSpec {
     folder.toFile.mkdir()
 
     val folderFile: Path = Paths.get("file.txt")
-    Files.write(folder resolve folderFile, Seq("root level"))
+    Files.write(folder resolve folderFile, Seq("root level").asJava)
 
     val subfolder = folder resolve "subfolder"
     subfolder.toFile.mkdir()
 
     val subfolderFile: Path = Paths.get("file.txt")
-    Files.write(subfolder resolve subfolderFile, Seq("subfolder level"))
+    Files.write(subfolder resolve subfolderFile, Seq("subfolder level").asJava)
 
     def verifyFolderStructureExtracted(to: Path) = {
-      Files.readAllLines(to resolve folderFile).mkString shouldBe "root level"
+      Files.readAllLines(to resolve folderFile).asScala.mkString shouldBe "root level"
 
       assert((to resolve subfolder.getFileName).toFile.exists(), s"$subfolder should exist")
       Files
         .readAllLines(to resolve subfolder.getFileName resolve subfolderFile)
+        .asScala
         .mkString shouldBe "subfolder level"
     }
   }

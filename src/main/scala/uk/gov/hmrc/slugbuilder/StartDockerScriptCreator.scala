@@ -22,15 +22,18 @@ import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.{Files, OpenOption, Path, Paths}
 import cats.implicits._
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
-import scala.collection.JavaConversions._
+
+import scala.jdk.CollectionConverters._
 
 class StartDockerScriptCreator(
   create: Path => Unit        = path => path.toFile.mkdir(),
   existCheck: Path => Boolean = path => path.toFile.exists(),
   move: (Path, Path) => Unit  = (file, directory) => Files.move(file, directory),
   copy: (Path, Path) => Unit  = (source, target) => Files.copy(source, target),
-  createFile: (Path, Seq[String], Charset, OpenOption) => Unit = (file, content, charset, openOption) =>
-    Files.write(file, content, charset, openOption)) {
+  createFile: (Path, Seq[String], Charset, OpenOption) => Unit =
+    (file, content, charset, openOption) =>
+      Files.write(file, content.asJava, charset, openOption)
+) {
 
   def ensureStartDockerExists(
                                workspace: Path,

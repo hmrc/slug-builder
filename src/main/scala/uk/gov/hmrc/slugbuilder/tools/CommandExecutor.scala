@@ -19,7 +19,6 @@ package uk.gov.hmrc.slugbuilder.tools
 import cats.implicits._
 
 import scala.util.Try
-import scala.util.control.NonFatal
 
 object CommandExecutor {
 
@@ -28,8 +27,4 @@ object CommandExecutor {
       .fromTry {
         Try(operation)
       }
-      .leftMap {
-        case NonFatal(exception) => exception
-      }
-
 }

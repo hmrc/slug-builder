@@ -21,17 +21,15 @@ import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission._
 import java.nio.file.{Path, Paths}
 
-import org.mockito.ArgumentMatchers.{any, eq => meq}
-import org.mockito.Mockito.{doThrow, verify, when}
-import org.scalatest.Matchers._
-import org.scalatest.WordSpec
-import org.scalatest.mockito.MockitoSugar
+import org.mockito.scalatest.MockitoSugar
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
 
-class SlugBuilderSpec extends WordSpec with MockitoSugar {
+class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
 
   "create" should {
 
@@ -424,10 +422,10 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         super.printSuccess(message)
       }
     }
-    val artifactConnector        = mock[ArtifactoryConnector]
-    val tarArchiver              = mock[TarArchiver]
-    val startDockerScriptCreator = mock[StartDockerScriptCreator]
-    val fileUtils                = mock[FileUtils]
+    val artifactConnector        = mock[ArtifactoryConnector    ](withSettings.lenient)
+    val tarArchiver              = mock[TarArchiver             ](withSettings.lenient)
+    val startDockerScriptCreator = mock[StartDockerScriptCreator](withSettings.lenient)
+    val fileUtils                = mock[FileUtils               ](withSettings.lenient)
 
     val jdkFileName = "jdk.tgz"
 
@@ -453,7 +451,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
     when(
       startDockerScriptCreator
-        .ensureStartDockerExists(meq(workspaceDirectory), meq(slugDirectory), meq(repositoryName), any()))
+        .ensureStartDockerExists(eqTo(workspaceDirectory), eqTo(slugDirectory), eqTo(repositoryName), any))
       .thenReturn(Right("Created new start-docker.sh script"))
 
     when(artifactConnector.downloadJdk(jdkFileName))

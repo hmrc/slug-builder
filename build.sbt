@@ -1,53 +1,40 @@
 import sbt.Keys._
 import sbt._
-import uk.gov.hmrc.DefaultBuildSettings._
-import uk.gov.hmrc.SbtArtifactory
-import uk.gov.hmrc.versioning.SbtGitVersioning
 
-val appName: String = "slug-builder"
-
-lazy val slugBuilder = Project(appName, file("."))
-  .enablePlugins(Seq(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory): _*)
-  .settings(scalaSettings: _*)
-  .settings(defaultSettings(): _*)
+lazy val slugBuilder = Project("slug-builder", file("."))
   .settings(
     majorVersion := 0,
-    makePublicallyAvailableOnBintray := true,
+    isPublicArtefact := true,
     libraryDependencies ++= compileDependencies ++ testDependencies,
-    retrieveManaged := true,
+    scalaVersion := "2.13.7",
     assemblySettings,
     evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false)
   )
 
 val compileDependencies = Seq(
-  "com.typesafe.play"  %% "play-ahc-ws-standalone" % "1.1.2",
-  "com.typesafe.play"  %% "play-json"              % "2.6.13",
-  "log4j"              % "log4j"                   % "1.2.17",
-  "org.apache.commons" % "commons-compress"        % "1.16.1",
-  "org.eclipse.jgit"   % "org.eclipse.jgit"        % "4.11.0.201803080745-r",
-  "org.slf4j"          % "slf4j-api"               % "1.7.25",
-  "org.slf4j"          % "slf4j-log4j12"           % "1.7.25",
-  "org.typelevel"      %% "cats-core"              % "1.0.1",
-  // force dependencies due to security flaws found in jackson-databind < 2.9.x using XRay
-  "com.fasterxml.jackson.core"     % "jackson-core"            % "2.9.7",
-  "com.fasterxml.jackson.core"     % "jackson-databind"        % "2.9.7",
-  "com.fasterxml.jackson.core"     % "jackson-annotations"     % "2.9.7",
-  "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8"   % "2.9.7",
-  "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.9.7"
+  "com.typesafe.play"  %% "play-ahc-ws-standalone" % "2.1.7",
+  "com.typesafe.play"  %% "play-json"              % "2.9.2",
+  "log4j"              %  "log4j"                  % "1.2.17",
+  "org.apache.commons" %  "commons-compress"       % "1.16.1",
+  "org.eclipse.jgit"   %  "org.eclipse.jgit"       % "4.11.0.201803080745-r",
+  "org.slf4j"          %  "slf4j-api"              % "1.7.25",
+  "org.slf4j"          %  "slf4j-log4j12"          % "1.7.25",
+  "org.typelevel"      %% "cats-core"              % "2.7.0"
 )
 
 val testDependencies = Seq(
-  "org.mockito"    % "mockito-core" % "2.18.3" % Test,
-  "org.pegdown"    % "pegdown"      % "1.6.0"  % Test,
-  "org.scalacheck" %% "scalacheck"  % "1.14.0" % Test,
-  "org.scalamock"  %% "scalamock"   % "4.1.0"  % Test,
-  "org.scalatest"  %% "scalatest"   % "3.0.5"  % Test
+  "org.scalatestplus"    %% "scalatestplus-scalacheck" % "3.1.0.0-RC2" % Test,
+  "org.scalatest"        %% "scalatest"                % "3.2.3"       % Test,
+  "org.mockito"          %% "mockito-scala-scalatest"  % "1.16.46"     % Test,
+  "org.scalamock"        %% "scalamock"                % "5.2.0"       % Test, // TODO scalamock and mockito!?
+  "com.vladsch.flexmark" %  "flexmark-all"             % "0.35.10"     % Test
 )
 
 val assemblySettings = Seq(
-  test in assembly := {},
-  assemblyMergeStrategy in assembly := {
+  assembly / test := {},
+  assembly / assemblyMergeStrategy := {
     case PathList("META-INF", xs @ _*)                                                           => MergeStrategy.discard
+    case PathList("module-info.class")                                                           => MergeStrategy.discard // from com/fasterxml/jackson libraries (TODO do we need to keep first?)
     case PathList("org", "apache", "commons", "logging", xs @ _*)                                => MergeStrategy.first
     case PathList("play", "core", "server", xs @ _*)                                             => MergeStrategy.first
     case PathList("javax", "inject", xs @ _*)                                                    => MergeStrategy.first
@@ -57,12 +44,12 @@ val assemblySettings = Seq(
     case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl$AFUNIXOutputStream.class") => MergeStrategy.first
     case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl$Lenient.class")            => MergeStrategy.first
     case PathList("org", "newsclub", "net", "unix", "AFUNIXSocketImpl.class")                    => MergeStrategy.first
-    case x                                                                                       => (assemblyMergeStrategy in assembly).value(x)
+    case x                                                                                       => (assembly / assemblyMergeStrategy).value(x)
   },
-  artifact in (Compile, assembly) := {
-    val art = (artifact in (Compile, assembly)).value
-    art.copy(`classifier` = Some("assembly"))
+  Compile / assembly / artifact := {
+    val art = (Compile / assembly / artifact).value
+    art.withClassifier(Some("assembly"))
   }
 )
 
-addArtifact(artifact in (Compile, assembly), assembly)
+addArtifact(Compile / assembly / artifact, assembly)

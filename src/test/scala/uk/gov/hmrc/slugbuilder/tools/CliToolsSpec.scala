@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.slugbuilder.tools
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class CliToolsSpec extends WordSpec with Matchers {
+class CliToolsSpec extends AnyWordSpec with Matchers {
 
   "run" should {
     "execute a commandline" in new TestSetup {

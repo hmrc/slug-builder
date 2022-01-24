@@ -22,13 +22,16 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.{OpenOption, Path, Paths}
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.Matchers._
-import org.scalatest.WordSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.repositoryNameGen
 import scala.language.implicitConversions
 
-class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
+class StartDockerScriptCreatorSpec
+  extends AnyWordSpec
+     with Matchers
+     with MockFactory {
 
   "ensureStartDockerExists" should {
 
@@ -231,6 +234,4 @@ class StartDockerScriptCreatorSpec extends WordSpec with MockFactory {
     val createFile           = mockFunction[Path, Seq[String], Charset, OpenOption, Unit]
     val startDockerShCreator = new StartDockerScriptCreator(createDir, checkFileExist, move, copy, createFile)
   }
-
-  private implicit def pathToFile(path: Path): File = path.toFile
 }

@@ -115,9 +115,9 @@ class SlugBuilder(
 
   private def removeSensitiveProperties(properties: Map[String, String]): Map[String, String] = {
     val sensitiveKeys = Seq("pass", "token", "user", "key", "secret", "cookie")
-    properties.filterKeys { key =>
+    properties.view.filterKeys { key =>
       !sensitiveKeys.exists(key.toLowerCase.contains(_))
-    }
+    }.toMap
   }
 
   private def createJavaSh(javaSh: Path): Unit =
