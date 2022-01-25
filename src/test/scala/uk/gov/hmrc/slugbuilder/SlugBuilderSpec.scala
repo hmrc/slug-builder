@@ -20,7 +20,7 @@ import org.mockito.scalatest.MockitoSugar
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
+import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, GithubConnector}
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
@@ -60,6 +60,7 @@ class SlugBuilderSpec
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
       progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
+      progressReporter.logs should not contain("Slug published successfully to https://artifactory/some-slug.tgz")
 
       verify(startDockerScriptCreator).ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None)
 
@@ -84,6 +85,9 @@ class SlugBuilderSpec
       val javaSh: Path = profileD.resolve("java.sh")
       verify(fileUtils)
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
+
+      verify(artifactConnector, never)
+        .publish(*, *)
     }
 
     "finishes successfully and does not copy sensitive environment variables to build.properties" in new Setup {
@@ -160,7 +164,6 @@ class SlugBuilderSpec
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
       progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
-      //progressReporter.logs should contain("Slug published successfully to https://artifactory/some-slug.tgz")
 
       verify(startDockerScriptCreator).ensureStartDockerExists(
         workspaceDirectory,
@@ -190,6 +193,9 @@ class SlugBuilderSpec
     }
 
     "publish" in new Setup {
+      when(artifactConnector.publish(repositoryName, releaseVersion))
+        .thenReturn(Right(s"Slug published successfully to https://artifactory/some-slug.tgz"))
+
       slugBuilder.create(
         repositoryName,
         releaseVersion,
@@ -231,6 +237,9 @@ class SlugBuilderSpec
       val javaSh: Path = profileD.resolve("java.sh")
       verify(fileUtils)
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
+
+      verify(artifactConnector)
+        .publish(repositoryName, releaseVersion)
     }
 
     "not create the slug if it already exists in the Webstore" in new Setup {
@@ -266,7 +275,7 @@ class SlugBuilderSpec
     }
 
     "not create the slug if there is app-config-base in the Webstore" in new Setup {
-      when(artifactConnector.downloadAppConfigBase(repositoryName))
+      when(githubConnector.downloadAppConfigBase(repositoryName))
         .thenReturn(Left("app-config-base does not exist"))
 
       slugBuilder.create(
@@ -481,6 +490,7 @@ class SlugBuilderSpec
       }
     }
     val artifactConnector        = mock[ArtifactoryConnector    ](withSettings.lenient)
+    val githubConnector          = mock[GithubConnector         ](withSettings.lenient)
     val tarArchiver              = mock[TarArchiver             ](withSettings.lenient)
     val startDockerScriptCreator = mock[StartDockerScriptCreator](withSettings.lenient)
     val fileUtils                = mock[FileUtils               ](withSettings.lenient)
@@ -488,7 +498,14 @@ class SlugBuilderSpec
     val jdkFileName = "jdk.tgz"
 
     val slugBuilder =
-      new SlugBuilder(progressReporter, artifactConnector, tarArchiver, startDockerScriptCreator, fileUtils)
+      new SlugBuilder(
+        progressReporter,
+        artifactConnector,
+        githubConnector,
+        tarArchiver,
+        startDockerScriptCreator,
+        fileUtils
+      )
 
     when(artifactConnector.slugArtifactFileName(repositoryName, releaseVersion))
       .thenReturn(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
@@ -496,20 +513,16 @@ class SlugBuilderSpec
     when(artifactConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
       .thenReturn(Right("Slug does not exist"))
 
-    when(
-      artifactConnector
-        .downloadArtifact(repositoryName, releaseVersion, ArtifactFileName(repositoryName, releaseVersion)))
+    when(artifactConnector.downloadArtifact(repositoryName, releaseVersion, ArtifactFileName(repositoryName, releaseVersion)))
       .thenReturn(Right("Artifact downloaded"))
 
-    when(artifactConnector.downloadAppConfigBase(repositoryName))
+    when(githubConnector.downloadAppConfigBase(repositoryName))
       .thenReturn(Right("app-config-base downloaded"))
 
     when(tarArchiver.decompress(artifactFile, slugDirectory))
       .thenReturn(Right(s"Successfully decompressed $artifactFile"))
 
-    when(
-      startDockerScriptCreator
-        .ensureStartDockerExists(eqTo(workspaceDirectory), eqTo(slugDirectory), eqTo(repositoryName), any))
+    when(startDockerScriptCreator.ensureStartDockerExists(eqTo(workspaceDirectory), eqTo(slugDirectory), eqTo(repositoryName), any))
       .thenReturn(Right("Created new start-docker.sh script"))
 
     when(artifactConnector.downloadJdk(jdkFileName))
@@ -520,8 +533,5 @@ class SlugBuilderSpec
 
     when(tarArchiver.compress(slugTgzFile, slugDirectory))
       .thenReturn(Right(s"Successfully compressed $slugTgzFile"))
-
-    when(artifactConnector.publish(repositoryName, releaseVersion))
-      .thenReturn(Right(s"Slug published successfully to https://artifactory/some-slug.tgz"))
   }
 }

@@ -34,7 +34,7 @@ object ArgParser {
     for {
       command <- args.get("command-name", atIdx = 0).flatMap {
                   case c @ ("build" | "publish") => Right(c)
-                  case _                             => Left("Please supply 'build' or 'publish' as the first argument")
+                  case _                         => Left("Please supply 'build' or 'publish' as the first argument")
                 }
       repoName <- args.get("repository-name", atIdx = 1).flatMap(RepositoryName.create)
       version  <- args.get("release-version", atIdx = 2).flatMap(ReleaseVersion.create)

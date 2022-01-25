@@ -42,7 +42,6 @@ class FileDownloaderSpec
      with ScalaFutures {
 
   "download" should {
-
     "return Right if file can be downloaded from the given url" in new Setup {
       (wsRequest.withRequestTimeout(_: Duration))
         .expects(5.minutes)
@@ -173,6 +172,10 @@ class FileDownloaderSpec
 
     (wsClient.url(_: String))
       .expects(fileUrl.toString)
+      .returning(wsRequest)
+
+    (wsRequest.addHttpHeaders _)
+      .expects(List.empty)
       .returning(wsRequest)
   }
 }

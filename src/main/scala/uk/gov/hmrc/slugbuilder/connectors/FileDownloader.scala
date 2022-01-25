@@ -46,10 +46,15 @@ class FileDownloader(wsClient: StandaloneWSClient)(implicit materializer: Materi
 
   private val requestTimeout = 5.minutes
 
-  def download(fileUrl: FileUrl, destinationFileName: DestinationFileName): Either[DownloadError, Unit] =
+  def download(
+    fileUrl            : FileUrl,
+    destinationFileName: DestinationFileName,
+    headers            : Map[String, String] = Map.empty
+  ): Either[DownloadError, Unit] =
     Await.result(
       wsClient
         .url(fileUrl.toString)
+        .addHttpHeaders(headers.toList: _*)
         .withRequestTimeout(requestTimeout)
         .get()
         .flatMap { response =>
