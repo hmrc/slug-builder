@@ -45,7 +45,8 @@ class SlugBuilder(
     releaseVersion     : ReleaseVersion,
     slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts],
     buildProperties    : Map[String, String],
-    includeFiles       : Option[String]
+    includeFiles       : Option[String],
+    publish            : Boolean
   ): Either[Unit, Unit] = {
 
     val artifact            = ArtifactFileName(repositoryName, releaseVersion)
@@ -104,8 +105,10 @@ class SlugBuilder(
             .map(_ => printSuccess(s"Successfully created .profile.d/java.sh"))
       _ <- archiver.compress(slugTgzFile, slugDirectory)
              .map(printSuccess)
-      _ <- artifactoryConnector.publish(repositoryName, releaseVersion)
-             .map(printSuccess)
+      _ <- if (publish)
+             artifactoryConnector.publish(repositoryName, releaseVersion)
+               .map(printSuccess)
+           else Right(())
     } yield ()
   }.leftMap(printError)
 

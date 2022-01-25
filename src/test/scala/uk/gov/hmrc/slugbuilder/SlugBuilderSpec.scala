@@ -38,7 +38,6 @@ class SlugBuilderSpec
      with EitherValues {
 
   "create" should {
-
     "finish successfully if " +
       "slug for the given version of the microservice does not exist and " +
       "microservice artifact can be downloaded and " +
@@ -50,7 +49,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map("a" -> "b", "c" -> "d"),
-        includeFiles        = Some("path/file1")
+        includeFiles        = Some("path/file1"),
+        publish             = false
       ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
@@ -58,9 +58,8 @@ class SlugBuilderSpec
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
-      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
-      progressReporter.logs should contain("Slug published successfully to https://artifactory/some-slug.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
+      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
 
       verify(startDockerScriptCreator).ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None)
 
@@ -88,7 +87,6 @@ class SlugBuilderSpec
     }
 
     "finishes successfully and does not copy sensitive environment variables to build.properties" in new Setup {
-
       private val environmentVariables = Map(
         "a"                    -> "b",
         "GITHUB_TOKEN"         -> "token",
@@ -104,7 +102,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts   = None,
         environmentVariables,
-        includeFiles          = None
+        includeFiles          = None,
+        publish               = false
       ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
@@ -112,9 +111,8 @@ class SlugBuilderSpec
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
-      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
-      progressReporter.logs should contain("Slug published successfully to https://artifactory/some-slug.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
+      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
 
       verify(startDockerScriptCreator).ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None)
 
@@ -150,8 +148,9 @@ class SlugBuilderSpec
         repositoryName,
         releaseVersion,
         Some(SlugRuntimeJavaOpts("-Xmx256")),
-        buildProperties = Map("a" -> "b", "c" -> "d"),
-        includeFiles    = None
+        buildProperties       = Map("a" -> "b", "c" -> "d"),
+        includeFiles          = None,
+        publish               = false
       ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
@@ -159,9 +158,9 @@ class SlugBuilderSpec
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
-      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
-      progressReporter.logs should contain("Slug published successfully to https://artifactory/some-slug.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
+      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
+      //progressReporter.logs should contain("Slug published successfully to https://artifactory/some-slug.tgz")
 
       verify(startDockerScriptCreator).ensureStartDockerExists(
         workspaceDirectory,
@@ -190,6 +189,50 @@ class SlugBuilderSpec
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
     }
 
+    "publish" in new Setup {
+      slugBuilder.create(
+        repositoryName,
+        releaseVersion,
+        slugRuntimeJavaOpts = None,
+        buildProperties     = Map("a" -> "b", "c" -> "d"),
+        includeFiles        = Some("path/file1"),
+        publish             = true
+      ).value shouldBe ()
+
+      progressReporter.logs should contain("Slug does not exist")
+      progressReporter.logs should contain("Artifact downloaded")
+      progressReporter.logs should contain("app-config-base downloaded")
+      progressReporter.logs should contain("Successfully downloaded the JDK")
+      progressReporter.logs should contain("Successfully decompressed jdk.tgz")
+      progressReporter.logs should contain("Successfully created .profile.d/java.sh")
+      progressReporter.logs should contain(s"Successfully compressed $slugTgzFile")
+      progressReporter.logs should contain("Slug published successfully to https://artifactory/some-slug.tgz")
+
+      verify(startDockerScriptCreator).ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None)
+
+      verify(fileUtils).createDir(slugDirectory)
+
+      verify(fileUtils)
+        .setPermissions(
+          startDockerFile,
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+
+      verify(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
+
+      verify(fileUtils).createFile(buildPropertiesFile, "a=b\nc=d", UTF_8, CREATE_NEW)
+
+      verify(fileUtils).copyFile(Paths.get("path/file1"), slugDirectory)
+
+      verify(fileUtils).createDir(slugDirectory.resolve(".jdk"))
+
+      val profileD: Path = slugDirectory.resolve(".profile.d")
+      verify(fileUtils).createDir(profileD)
+
+      val javaSh: Path = profileD.resolve("java.sh")
+      verify(fileUtils)
+        .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
+    }
+
     "not create the slug if it already exists in the Webstore" in new Setup {
       when(artifactConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
         .thenReturn(Left("Slug does exist"))
@@ -199,13 +242,13 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Slug does exist")
     }
 
     "not create the slug if there is no artifact in the Artifactory" in new Setup {
-
       when(
         artifactConnector
           .downloadArtifact(repositoryName, releaseVersion, ArtifactFileName(repositoryName, releaseVersion)))
@@ -216,13 +259,13 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Artifact does not exist")
     }
 
     "not create the slug if there is app-config-base in the Webstore" in new Setup {
-
       when(artifactConnector.downloadAppConfigBase(repositoryName))
         .thenReturn(Left("app-config-base does not exist"))
 
@@ -231,13 +274,13 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("app-config-base does not exist")
     }
 
     "return error message when slug directory cannot be created" in new Setup {
-
       val exception = new RuntimeException("exception message")
       doThrow(exception).when(fileUtils).createDir(slugDirectory)
 
@@ -246,7 +289,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't create slug directory at ${slugDirectory.toFile.getName}. Cause: ${exception.getMessage}")
@@ -261,13 +305,13 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Some error")
     }
 
     "return error when start-docker.sh creation return left" in new Setup {
-
       val errorMessage = "error message"
       when(startDockerScriptCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None))
         .thenReturn(Left(errorMessage))
@@ -277,7 +321,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("error message")
     }
@@ -295,7 +340,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
@@ -310,7 +356,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
     }
@@ -324,7 +371,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't create .jdk directory at $slugDirectory/.jdk. Cause: ${exception.getMessage}")
@@ -339,13 +387,13 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Error downloading JDK")
     }
 
     "return error message when the JDK cannot be extracted" in new Setup {
-
       when(tarArchiver.decompress(Paths.get(jdkFileName), slugDirectory.resolve(".jdk")))
         .thenReturn(Left("Some error"))
 
@@ -354,7 +402,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Some error")
     }
@@ -368,7 +417,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(s"Some error")
     }
@@ -382,7 +432,8 @@ class SlugBuilderSpec
         releaseVersion,
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
-        includeFiles        = None
+        includeFiles        = None,
+        publish             = true
       ).left.value shouldBe ()
       progressReporter.logs should contain(s"Some error")
     }
@@ -397,7 +448,8 @@ class SlugBuilderSpec
           releaseVersion,
           slugRuntimeJavaOpts = None,
           buildProperties     = Map.empty,
-          includeFiles        = None
+          includeFiles        = None,
+          publish             = false
         )
       ) shouldBe error
     }

@@ -18,7 +18,7 @@ package uk.gov.hmrc.slugbuilder
 
 import akka.actor.ActorSystem
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
-import uk.gov.hmrc.slugbuilder.ArgParser.{Publish, Unpublish}
+import uk.gov.hmrc.slugbuilder.ArgParser.{Build, Publish}
 import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, FileDownloader}
 import uk.gov.hmrc.slugbuilder.tools.{CliTools, FileUtils, TarArchiver}
 
@@ -39,6 +39,7 @@ object Main {
 
   private val httpClient       = StandaloneAhcWSClient()
   private val fileDownloader   = new FileDownloader(httpClient)
+
   private val artifactoryConnector =
     new ArtifactoryConnector(
       httpClient,
@@ -61,13 +62,12 @@ object Main {
 
   def main(args: Array[String]): Unit =
     (ArgParser.parse(args).getOrExit match {
+      case Build(repositoryName, releaseVersion) =>
+        slugBuilder
+          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables, includeFiles, publish = false)
       case Publish(repositoryName, releaseVersion) =>
         slugBuilder
-          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables, includeFiles)
-      case Unpublish(repositoryName, releaseVersion) =>
-        artifactoryConnector
-          .unpublish(repositoryName, releaseVersion)
-          .map(progressReporter.printSuccess)
+          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables, includeFiles, publish = true)
     }).fold(
       _ => sys.exit(1),
       _ => sys.exit(0)

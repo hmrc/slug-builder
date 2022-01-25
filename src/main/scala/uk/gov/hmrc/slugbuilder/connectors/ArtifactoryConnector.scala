@@ -148,27 +148,4 @@ class ArtifactoryConnector(
       requestTimeout
     )
   }
-
-  def unpublish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
-    val unpublishUrl = slugUrl(webstoreLocalRepo, repositoryName, releaseVersion)
-
-    Await.result(
-      wsClient
-        .url(unpublishUrl)
-        .withAuth(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
-        .delete()
-        .map { response =>
-          response.status match {
-            case 204 => Right(s"Slug unpublished successfully from $unpublishUrl")
-            case 404 => Right(s"Nothing to do: slug does not exist in $unpublishUrl")
-            case status =>
-              progressReporter.printError(
-                s"DELETE from $unpublishUrl returned with errors: ${Json.stringify(Json.parse(response.body))}"
-              )
-              Left(s"Could not unpublish slug from $unpublishUrl. Returned status $status")
-          }
-        },
-      requestTimeout
-    )
-  }
 }

@@ -18,27 +18,30 @@ package uk.gov.hmrc.slugbuilder
 
 object ArgParser {
 
-  sealed trait Config {
-    val repositoryName: RepositoryName
-    val releaseVersion: ReleaseVersion
-  }
+  sealed trait Config
 
-  case class Publish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) extends Config
+  case class Build(
+    repositoryName: RepositoryName,
+    releaseVersion: ReleaseVersion
+  ) extends Config
 
-  case class Unpublish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) extends Config
+  case class Publish(
+    repositoryName: RepositoryName,
+    releaseVersion: ReleaseVersion
+  ) extends Config
 
   def parse(args: Array[String]): Either[String, Config] =
     for {
       command <- args.get("command-name", atIdx = 0).flatMap {
-                  case c @ ("publish" | "unpublish") => Right(c)
-                  case _                             => Left("Please supply 'publish' or 'unpublish' as the first argument")
+                  case c @ ("build" | "publish") => Right(c)
+                  case _                             => Left("Please supply 'build' or 'publish' as the first argument")
                 }
       repoName <- args.get("repository-name", atIdx = 1).flatMap(RepositoryName.create)
       version  <- args.get("release-version", atIdx = 2).flatMap(ReleaseVersion.create)
     } yield
       (command: @unchecked) match {
-        case "publish"   => Publish(repoName, version)
-        case "unpublish" => Unpublish(repoName, version)
+        case "build"   => Build(repoName, version)
+        case "publish" => Publish(repoName, version)
       }
 
   private implicit class ArgsOps(args: Array[String]) {

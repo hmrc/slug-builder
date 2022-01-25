@@ -150,7 +150,6 @@ class ArtifactoryConnectorSpec
   }
 
   "downloadArtifact" should {
-
     val fileNotFound = Left[DownloadError, Unit](DownloadError("A file does not exist"))
 
     "return Right if artifact can be downloaded from Artifactory successfully" in new Setup {
@@ -258,86 +257,6 @@ class ArtifactoryConnectorSpec
         s"""PUT to $slugUrl returned with errors: {"errors":[{"status":403,"message":"Some ERROR"}]}""")
 
       fileToUpload.toFile.delete()
-    }
-  }
-
-  "unpublish" should {
-    "do a DELETE with proper authentication" in new Setup {
-      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
-
-      (wsClient.url(_: String))
-        .expects(slugUrl)
-        .returning(wsRequest)
-
-      (wsRequest.withAuth(_: String, _: String, _: WSAuthScheme))
-        .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
-        .returning(wsRequest)
-
-      (wsRequest.delete _)
-        .expects()
-        .returning(Future.successful(wsResponse))
-
-      (() => wsResponse.status)
-        .expects()
-        .returning(204)
-
-      connector.unpublish(repositoryName, releaseVersion) shouldBe Right(s"Slug unpublished successfully from $slugUrl")
-    }
-
-    "not do anything is the slug does not exist" in new Setup {
-      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
-
-      (wsClient.url(_: String))
-        .expects(slugUrl)
-        .returning(wsRequest)
-
-      (wsRequest.withAuth(_: String, _: String, _: WSAuthScheme))
-        .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
-        .returning(wsRequest)
-
-      (wsRequest.delete _)
-        .expects()
-        .returning(Future.successful(wsResponse))
-
-      (() => wsResponse.status)
-        .expects()
-        .returning(404)
-
-      connector.unpublish(repositoryName, releaseVersion) shouldBe Right(
-        s"Nothing to do: slug does not exist in $slugUrl")
-    }
-
-    "handle errors" in new Setup {
-      val slugurl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
-
-      (wsClient.url(_: String))
-        .expects(slugurl)
-        .returning(wsRequest)
-
-      (wsRequest.withAuth(_: String, _: String, _: WSAuthScheme))
-        .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
-        .returning(wsRequest)
-
-      (wsRequest.delete _)
-        .expects()
-        .returning(Future.successful(wsResponse))
-
-      (() => wsResponse.status)
-        .expects()
-        .returning(401)
-
-      val responseBody = """{
-                              "errors" : [ {
-                                "status" : 401,
-                                "message" : "Some ERROR"
-                              } ]
-                            }"""
-      (() => wsResponse.body)
-        .expects()
-        .returning(responseBody)
-
-      connector.unpublish(repositoryName, releaseVersion) shouldBe Left(
-        s"Could not unpublish slug from $slugurl. Returned status 401")
     }
   }
 
