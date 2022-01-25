@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,20 @@
 package uk.gov.hmrc.slugbuilder.tools
 
 import java.nio.charset.Charset
-import java.nio.file.{Files, OpenOption, Path, Paths}
+import java.nio.file.{Files, OpenOption, Path}
 import java.nio.file.attribute.PosixFilePermission
 
-import scala.collection.JavaConversions._
+import scala.jdk.CollectionConverters._
 
 class FileUtils {
   def createDir(dir: Path): Unit =
     if (Files.exists(dir)) () else dir.toFile.mkdir()
 
   def setPermissions(file: Path, permissions: Set[PosixFilePermission]): Unit =
-    Files.setPosixFilePermissions(file, permissions)
+    Files.setPosixFilePermissions(file, permissions.asJava)
 
   def createFile(file: Path, content: String, charset: Charset, openOption: OpenOption): Unit =
-    Files.write(file, Seq(content), charset, openOption)
+    Files.write(file, Seq(content).asJava, charset, openOption)
 
   def copyFile(source: Path, targetDirectory: Path): Unit =
     Files.copy(source, targetDirectory.resolve(source.getFileName))

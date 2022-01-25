@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,38 @@
 
 package uk.gov.hmrc.slugbuilder.connectors
 
-import java.io.File
-import java.nio.file.{Files, Path, Paths}
-
-import org.scalactic.source.Position
 import org.scalamock.scalatest.MockFactory
+import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws.{BodyWritable, StandaloneWSClient, WSAuthScheme}
+import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, ScalaVersion, TestWSRequest}
+import uk.gov.hmrc.slugbuilder.ScalaVersions._
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.{allHttpStatusCodes, nonEmptyStrings, releaseVersionGen, repositoryNameGen}
 import uk.gov.hmrc.slugbuilder.tools._
-import uk.gov.hmrc.slugbuilder.ScalaVersions._
-import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, ScalaVersion, TestWSRequest}
 
+import java.io.File
+import java.nio.file.{Files, Path, Paths}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutures with Matchers with BeforeAndAfterAll with EitherValues {
+
+class ArtifactoryConnectorSpec
+  extends AnyWordSpec
+     with MockFactory
+     with ScalaFutures
+     with Matchers
+     with BeforeAndAfterAll
+     with EitherValues {
 
   "verifySlugNotCreatedYet" should {
 
     "return Left if slug already exists" in new Setup {
       val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
-      (wsClient
-        .url(_: String))
+      (wsClient.url(_: String))
         .expects(url)
         .returning(wsRequest)
 
@@ -49,7 +55,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .expects()
         .returning(Future.successful(wsResponse))
 
-      (wsResponse.status _)
+      (() => wsResponse.status)
         .expects()
         .returning(200)
 
@@ -59,8 +65,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
 
     "return Right if slug does not exist" in new Setup {
       val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
-      (wsClient
-        .url(_: String))
+      (wsClient.url(_: String))
         .expects(url)
         .returning(wsRequest)
 
@@ -68,7 +73,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .expects()
         .returning(Future.successful(wsResponse))
 
-      (wsResponse.status _)
+      (() => wsResponse.status)
         .expects()
         .returning(404)
 
@@ -80,8 +85,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       allHttpStatusCodes filterNot Seq(200, 404).contains foreach { status =>
         new Setup {
           val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
-          (wsClient
-            .url(_: String))
+          (wsClient.url(_: String))
             .expects(url)
             .returning(wsRequest)
 
@@ -89,7 +93,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
             .expects()
             .returning(Future.successful(wsResponse))
 
-          (wsResponse.status _)
+          (() => wsResponse.status)
             .expects()
             .returning(status)
 
@@ -101,8 +105,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
 
     "return Left if calling webstore results in an exception" in new Setup {
       val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
-      (wsClient
-        .url(_: String))
+      (wsClient.url(_: String))
         .expects(url)
         .returning(wsRequest)
 
@@ -123,10 +126,9 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       val fileUrl             = FileUrl(s"$artifactoryUri/webstore/app-config-base/$repositoryName.conf")
       val destinationFileName = DestinationFileName(AppConfigBaseFileName(repositoryName).toString)
 
-      (fileDownloader
-        .download(_: FileUrl, _: DestinationFileName))
+      (fileDownloader.download(_: FileUrl, _: DestinationFileName))
         .expects(fileUrl, destinationFileName)
-        .returning(Right())
+        .returning(Right(()))
 
       connector
         .downloadAppConfigBase(repositoryName) shouldBe Right(s"Successfully downloaded app-config-base from $fileUrl")
@@ -138,8 +140,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       val destinationFileName = DestinationFileName(AppConfigBaseFileName(repositoryName).toString)
 
       val downloadingProblem = DownloadError("downloading problem")
-      (fileDownloader
-        .download(_: FileUrl, _: DestinationFileName))
+      (fileDownloader.download(_: FileUrl, _: DestinationFileName))
         .expects(fileUrl, destinationFileName)
         .returning(Left(downloadingProblem))
 
@@ -155,10 +156,10 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     "return Right if artifact can be downloaded from Artifactory successfully" in new Setup {
       stubArtifactDownload(v2_13, fileNotFound)
       stubArtifactDownload(v2_12, fileNotFound)
-      val fileUrl = stubArtifactDownload(v2_11, Right())
+      val fileUrl = stubArtifactDownload(v2_11, Right(()))
 
 
-      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).right.value should include(s"Successfully downloaded artifact from $fileUrl")
+      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).value should include(s"Successfully downloaded artifact from $fileUrl")
     }
 
     "return Left if there is no artifact" in new Setup {
@@ -169,15 +170,15 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     }
 
     "return Left if more then one " in new Setup {
-      stubArtifactDownload(v2_13, Right())
+      stubArtifactDownload(v2_13, Right(()))
       stubArtifactDownload(v2_12, fileNotFound)
-      stubArtifactDownload(v2_11, Right())
+      stubArtifactDownload(v2_11, Right(()))
       connector.downloadArtifact(repositoryName, releaseVersion, targetFile).left.value should include("Multiple artifact versions found")
     }
 
     "return Left if there was an error when downloading the artifact from Artifactory" in new Setup {
       val downloadingProblem = DownloadError("downloading problem")
-      val fileUrl = stubArtifactDownload(v2_13, Left(downloadingProblem))
+      stubArtifactDownload(v2_13, Left(downloadingProblem))
       stubArtifactDownload(v2_12, fileNotFound)
       stubArtifactDownload(v2_11, fileNotFound)
 
@@ -188,30 +189,26 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
   "publish" should {
     "do a PUT with proper authentication" in new Setup {
       val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
-      (wsClient
-        .url(_: String))
+      (wsClient.url(_: String))
         .expects(slugUrl)
         .returning(wsRequest)
 
       val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
       Files.write(fileToUpload, "some content".getBytes())
 
-      (wsRequest
-        .withRequestTimeout(_: Duration))
-        .expects(5 minutes)
+      (wsRequest.withRequestTimeout(_: Duration))
+        .expects(5.minutes)
         .returning(wsRequest)
 
-      (wsRequest
-        .withAuth(_: String, _: String, _: WSAuthScheme))
+      (wsRequest.withAuth(_: String, _: String, _: WSAuthScheme))
         .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
         .returning(wsRequest)
 
-      (wsRequest
-        .put(_: File)(_: BodyWritable[File]))
+      (wsRequest.put(_: File)(_: BodyWritable[File]))
         .expects(fileToUpload.toFile, implicitly[BodyWritable[File]])
         .returning(Future.successful(wsResponse))
 
-      (wsResponse.status _)
+      (() => wsResponse.status)
         .expects()
         .returning(201)
 
@@ -222,39 +219,35 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
 
     "handle errors" in new Setup {
       val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
-      (wsClient
-        .url(_: String))
+      (wsClient.url(_: String))
         .expects(slugUrl)
         .returning(wsRequest)
 
       val fileToUpload = Paths.get(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
       Files.write(fileToUpload, "some content".getBytes())
 
-      (wsRequest
-        .withRequestTimeout(_: Duration))
-        .expects(5 minutes)
+      (wsRequest.withRequestTimeout(_: Duration))
+        .expects(5.minutes)
         .returning(wsRequest)
 
-      (wsRequest
-        .withAuth(_: String, _: String, _: WSAuthScheme))
+      (wsRequest.withAuth(_: String, _: String, _: WSAuthScheme))
         .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
         .returning(wsRequest)
 
-      (wsRequest
-        .put(_: File)(_: BodyWritable[File]))
+      (wsRequest.put(_: File)(_: BodyWritable[File]))
         .expects(fileToUpload.toFile, implicitly[BodyWritable[File]])
         .returning(Future.successful(wsResponse))
 
-      (wsResponse.status _)
+      (() => wsResponse.status)
         .expects()
         .returning(403)
-      val responseBody = """|{
-                            |  "errors" : [ {
-                            |    "status" : 403,
-                            |    "message" : "Some ERROR"
-                            |  } ]
-                            |}""".stripMargin
-      (wsResponse.body _)
+      val responseBody = """{
+                              "errors" : [ {
+                                "status" : 403,
+                                "message" : "Some ERROR"
+                              } ]
+                            }"""
+      (() => wsResponse.body)
         .expects()
         .returning(responseBody)
 
@@ -272,13 +265,11 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     "do a DELETE with proper authentication" in new Setup {
       val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
 
-      (wsClient
-        .url(_: String))
+      (wsClient.url(_: String))
         .expects(slugUrl)
         .returning(wsRequest)
 
-      (wsRequest
-        .withAuth(_: String, _: String, _: WSAuthScheme))
+      (wsRequest.withAuth(_: String, _: String, _: WSAuthScheme))
         .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
         .returning(wsRequest)
 
@@ -286,7 +277,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .expects()
         .returning(Future.successful(wsResponse))
 
-      (wsResponse.status _)
+      (() => wsResponse.status)
         .expects()
         .returning(204)
 
@@ -296,13 +287,11 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     "not do anything is the slug does not exist" in new Setup {
       val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
 
-      (wsClient
-        .url(_: String))
+      (wsClient.url(_: String))
         .expects(slugUrl)
         .returning(wsRequest)
 
-      (wsRequest
-        .withAuth(_: String, _: String, _: WSAuthScheme))
+      (wsRequest.withAuth(_: String, _: String, _: WSAuthScheme))
         .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
         .returning(wsRequest)
 
@@ -310,7 +299,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .expects()
         .returning(Future.successful(wsResponse))
 
-      (wsResponse.status _)
+      (() => wsResponse.status)
         .expects()
         .returning(404)
 
@@ -321,13 +310,11 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
     "handle errors" in new Setup {
       val slugurl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
 
-      (wsClient
-        .url(_: String))
+      (wsClient.url(_: String))
         .expects(slugurl)
         .returning(wsRequest)
 
-      (wsRequest
-        .withAuth(_: String, _: String, _: WSAuthScheme))
+      (wsRequest.withAuth(_: String, _: String, _: WSAuthScheme))
         .expects(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
         .returning(wsRequest)
 
@@ -335,16 +322,17 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
         .expects()
         .returning(Future.successful(wsResponse))
 
-      (wsResponse.status _)
+      (() => wsResponse.status)
         .expects()
         .returning(401)
-      val responseBody = """|{
-                            |  "errors" : [ {
-                            |    "status" : 401,
-                            |    "message" : "Some ERROR"
-                            |  } ]
-                            |}""".stripMargin
-      (wsResponse.body _)
+
+      val responseBody = """{
+                              "errors" : [ {
+                                "status" : 401,
+                                "message" : "Some ERROR"
+                              } ]
+                            }"""
+      (() => wsResponse.body)
         .expects()
         .returning(responseBody)
 
@@ -387,8 +375,7 @@ class ArtifactoryConnectorSpec extends WordSpec with MockFactory with ScalaFutur
       )
       val artifactName = ArtifactFileName(repositoryName, releaseVersion).toString
       val destinationFileName = DestinationFileName(artifactName + "_" + scalaVersion)
-      (fileDownloader
-        .download(_: FileUrl, _: DestinationFileName))
+      (fileDownloader.download(_: FileUrl, _: DestinationFileName))
         .expects(fileUrl, *)
         .onCall { (_, destinationFile) =>
           outcome match {

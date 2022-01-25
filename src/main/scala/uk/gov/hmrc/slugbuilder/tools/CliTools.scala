@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.slugbuilder.tools
 
-import java.nio.file.Path
 import uk.gov.hmrc.slugbuilder.ProgressReporter
+
+import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -35,10 +36,10 @@ class CliTools(progressReporter: ProgressReporter) {
       val logger   = ProcessLogger(s => progressReporter.printSuccess(s), e => progressReporter.printError(e))
       val exitCode = pb.!(logger)
 
-      if (exitCode != 0) Left(s"got exit code $exitCode from command '${cmd.mkString(" ")}'") else Right(())
+      if (exitCode != 0) Left(s"Command '${cmd.mkString(" ")}' failed with exit code $exitCode") else Right(())
     }
 
-    Await.ready(cmdF, 2 minutes)
+    Await.ready(cmdF, 2.minutes)
 
     cmdF.value.get match {
       case Success(v) => v

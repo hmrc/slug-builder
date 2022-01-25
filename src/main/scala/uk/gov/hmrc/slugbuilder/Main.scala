@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,10 @@
 package uk.gov.hmrc.slugbuilder
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import cats.implicits._
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import uk.gov.hmrc.slugbuilder.ArgParser.{Publish, Unpublish}
 import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, FileDownloader}
 import uk.gov.hmrc.slugbuilder.tools.{CliTools, FileUtils, TarArchiver}
-import scala.language.postfixOps
 
 object Main {
 
@@ -38,8 +35,7 @@ object Main {
   private val environmentVariables = EnvironmentVariables.all
   private val includeFiles         = EnvironmentVariables.includeFiles
 
-  private implicit val system: ActorSystem    = ActorSystem()
-  private implicit val mat: ActorMaterializer = ActorMaterializer()
+  private implicit val system: ActorSystem = ActorSystem()
 
   private val httpClient       = StandaloneAhcWSClient()
   private val fileDownloader   = new FileDownloader(httpClient)
@@ -52,7 +48,8 @@ object Main {
       artifactoryUsername,
       artifactoryPassword,
       jdkFileName,
-      progressReporter)
+      progressReporter
+    )
 
   private lazy val slugBuilder = new SlugBuilder(
     progressReporter,

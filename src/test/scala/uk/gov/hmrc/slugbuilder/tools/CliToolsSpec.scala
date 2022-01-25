@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,34 @@
 
 package uk.gov.hmrc.slugbuilder.tools
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.EitherValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class CliToolsSpec extends WordSpec with Matchers {
+class CliToolsSpec
+  extends AnyWordSpec
+     with Matchers
+     with EitherValues {
 
   "run" should {
     "execute a commandline" in new TestSetup {
-      new CliTools(progressReporter).run(Array("echo", "Hello world")) should be('right)
+      new CliTools(progressReporter).run(Array("echo", "Hello world")).value shouldBe ()
       progressReporter.logs                                            should contain("Hello world")
     }
 
     "return handle errors where the command is not found" in new TestSetup {
       val invalidCmd = "invalidCmd"
-      new CliTools(progressReporter).run(Array(invalidCmd)) should be('left)
+      new CliTools(progressReporter).run(Array(invalidCmd)).left.value shouldBe "Cannot run program \"invalidCmd\": error=2, No such file or directory"
       progressReporter.logs                                 shouldBe empty
     }
 
     "return the exit code and error if it fails to execute the command" in new TestSetup {
-      new CliTools(progressReporter).run(Array("ls", "some-non-existing-file")) should be('left)
+      new CliTools(progressReporter).run(Array("ls", "some-non-existing-file")).left.value shouldBe "Command 'ls some-non-existing-file' failed with exit code 2"
       progressReporter.logs                                                     should not be empty
     }
   }
 
   trait TestSetup {
-
     val progressReporter = new ProgressReporterStub()
   }
 }

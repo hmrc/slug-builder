@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import cats.implicits._
-import org.scalatest.Matchers._
-import org.scalatest.WordSpec
-import org.scalatest.prop.PropertyChecks
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 
-class ReleaseVersionSpec extends WordSpec with PropertyChecks {
+class ReleaseVersionSpec
+  extends AnyWordSpec
+     with Matchers
+     with ScalaCheckDrivenPropertyChecks {
 
   "ReleaseVersion" should {
 

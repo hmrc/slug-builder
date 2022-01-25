@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.{Path, Paths}
-import java.nio.file.StandardOpenOption.CREATE_NEW
-import java.nio.file.attribute.PosixFilePermission._
 import cats.implicits._
 import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
+
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.{Path, Paths}
+import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.attribute.PosixFilePermission._
 
 class SlugBuilder(
   progressReporter: ProgressReporter,
@@ -40,11 +41,11 @@ class SlugBuilder(
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
 
   def create(
-    repositoryName: RepositoryName,
-    releaseVersion: ReleaseVersion,
+    repositoryName     : RepositoryName,
+    releaseVersion     : ReleaseVersion,
     slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts],
-    buildProperties: Map[String, String],
-    includeFiles: Option[String]
+    buildProperties    : Map[String, String],
+    includeFiles       : Option[String]
   ): Either[Unit, Unit] = {
 
     val artifact            = ArtifactFileName(repositoryName, releaseVersion)
@@ -115,9 +116,9 @@ class SlugBuilder(
 
   private def removeSensitiveProperties(properties: Map[String, String]): Map[String, String] = {
     val sensitiveKeys = Seq("pass", "token", "user", "key", "secret", "cookie")
-    properties.filterKeys { key =>
+    properties.view.filterKeys { key =>
       !sensitiveKeys.exists(key.toLowerCase.contains(_))
-    }
+    }.toMap
   }
 
   private def createJavaSh(javaSh: Path): Unit =

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,26 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.StandardOpenOption.CREATE_NEW
-import java.nio.file.attribute.PosixFilePermission._
-import java.nio.file.{Path, Paths}
-
-import org.mockito.ArgumentMatchers.{any, eq => meq}
-import org.mockito.Mockito.{doThrow, verify, when}
-import org.scalatest.Matchers._
-import org.scalatest.WordSpec
-import org.scalatest.mockito.MockitoSugar
+import org.mockito.scalatest.MockitoSugar
+import org.scalatest.EitherValues
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
 
-class SlugBuilderSpec extends WordSpec with MockitoSugar {
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.{Path, Paths}
+import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.attribute.PosixFilePermission._
+
+
+class SlugBuilderSpec
+  extends AnyWordSpec
+     with Matchers
+     with MockitoSugar
+     with EitherValues {
 
   "create" should {
 
@@ -47,7 +51,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map("a" -> "b", "c" -> "d"),
         includeFiles        = Some("path/file1")
-      ) should be('right)
+      ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -101,7 +105,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts   = None,
         environmentVariables,
         includeFiles          = None
-      ) should be('right)
+      ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -148,7 +152,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         Some(SlugRuntimeJavaOpts("-Xmx256")),
         buildProperties = Map("a" -> "b", "c" -> "d"),
         includeFiles    = None
-      ) should be('right)
+      ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -196,7 +200,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Slug does exist")
     }
 
@@ -213,7 +217,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Artifact does not exist")
     }
 
@@ -228,7 +232,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("app-config-base does not exist")
     }
 
@@ -243,7 +247,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't create slug directory at ${slugDirectory.toFile.getName}. Cause: ${exception.getMessage}")
     }
@@ -258,7 +262,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Some error")
     }
 
@@ -274,7 +278,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("error message")
     }
 
@@ -292,7 +296,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
     }
@@ -307,7 +311,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
     }
 
@@ -321,7 +325,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't create .jdk directory at $slugDirectory/.jdk. Cause: ${exception.getMessage}")
     }
@@ -336,7 +340,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Error downloading JDK")
     }
 
@@ -351,7 +355,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Some error")
     }
 
@@ -365,7 +369,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(s"Some error")
     }
 
@@ -379,7 +383,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(s"Some error")
     }
 
@@ -424,10 +428,10 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
         super.printSuccess(message)
       }
     }
-    val artifactConnector        = mock[ArtifactoryConnector]
-    val tarArchiver              = mock[TarArchiver]
-    val startDockerScriptCreator = mock[StartDockerScriptCreator]
-    val fileUtils                = mock[FileUtils]
+    val artifactConnector        = mock[ArtifactoryConnector    ](withSettings.lenient)
+    val tarArchiver              = mock[TarArchiver             ](withSettings.lenient)
+    val startDockerScriptCreator = mock[StartDockerScriptCreator](withSettings.lenient)
+    val fileUtils                = mock[FileUtils               ](withSettings.lenient)
 
     val jdkFileName = "jdk.tgz"
 
@@ -453,7 +457,7 @@ class SlugBuilderSpec extends WordSpec with MockitoSugar {
 
     when(
       startDockerScriptCreator
-        .ensureStartDockerExists(meq(workspaceDirectory), meq(slugDirectory), meq(repositoryName), any()))
+        .ensureStartDockerExists(eqTo(workspaceDirectory), eqTo(slugDirectory), eqTo(repositoryName), any))
       .thenReturn(Right("Created new start-docker.sh script"))
 
     when(artifactConnector.downloadJdk(jdkFileName))
