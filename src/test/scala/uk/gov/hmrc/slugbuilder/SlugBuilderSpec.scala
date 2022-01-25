@@ -16,12 +16,8 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.StandardOpenOption.CREATE_NEW
-import java.nio.file.attribute.PosixFilePermission._
-import java.nio.file.{Path, Paths}
-
 import org.mockito.scalatest.MockitoSugar
+import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
@@ -29,7 +25,17 @@ import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
 
-class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.{Path, Paths}
+import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.attribute.PosixFilePermission._
+
+
+class SlugBuilderSpec
+  extends AnyWordSpec
+     with Matchers
+     with MockitoSugar
+     with EitherValues {
 
   "create" should {
 
@@ -45,7 +51,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map("a" -> "b", "c" -> "d"),
         includeFiles        = Some("path/file1")
-      ) should be('right)
+      ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -99,7 +105,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts   = None,
         environmentVariables,
         includeFiles          = None
-      ) should be('right)
+      ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -146,7 +152,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         Some(SlugRuntimeJavaOpts("-Xmx256")),
         buildProperties = Map("a" -> "b", "c" -> "d"),
         includeFiles    = None
-      ) should be('right)
+      ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artifact downloaded")
@@ -194,7 +200,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Slug does exist")
     }
 
@@ -211,7 +217,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Artifact does not exist")
     }
 
@@ -226,7 +232,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("app-config-base does not exist")
     }
 
@@ -241,7 +247,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't create slug directory at ${slugDirectory.toFile.getName}. Cause: ${exception.getMessage}")
     }
@@ -256,7 +262,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Some error")
     }
 
@@ -272,7 +278,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("error message")
     }
 
@@ -290,7 +296,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
     }
@@ -305,7 +311,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
     }
 
@@ -319,7 +325,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(
         s"Couldn't create .jdk directory at $slugDirectory/.jdk. Cause: ${exception.getMessage}")
     }
@@ -334,7 +340,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Error downloading JDK")
     }
 
@@ -349,7 +355,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain("Some error")
     }
 
@@ -363,7 +369,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(s"Some error")
     }
 
@@ -377,7 +383,7 @@ class SlugBuilderSpec extends AnyWordSpec with Matchers with MockitoSugar {
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None
-      ) should be('left)
+      ).left.value shouldBe ()
       progressReporter.logs should contain(s"Some error")
     }
 

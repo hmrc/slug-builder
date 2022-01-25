@@ -15,7 +15,6 @@
  */
 
 package uk.gov.hmrc.slugbuilder.connectors
-import java.nio.file.{Files, Paths}
 
 import cats.implicits._
 import play.api.libs.json.Json
@@ -23,6 +22,7 @@ import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import uk.gov.hmrc.slugbuilder._
 
+import java.nio.file.{Files, Paths}
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._

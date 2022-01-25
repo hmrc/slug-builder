@@ -16,25 +16,28 @@
 
 package uk.gov.hmrc.slugbuilder.connectors
 
-import java.nio.file.{Files, Paths}
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{FileIO, Sink, Source}
 import akka.util.ByteString
 import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory
+import org.scalatest.EitherValues
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.ws.StandaloneWSClient
 import uk.gov.hmrc.slugbuilder.TestWSRequest
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
+
+import java.nio.file.{Files, Paths}
 import scala.concurrent.Future
 import scala.concurrent.duration.{Duration, _}
 
 class FileDownloaderSpec
   extends AnyWordSpec
      with Matchers
+     with EitherValues
      with MockFactory
      with ScalaFutures {
 
@@ -58,7 +61,7 @@ class FileDownloaderSpec
         .expects()
         .returning(Source.single(fileContent))
 
-      fileDownloader.download(fileUrl, destinationFileName) should be('right)
+      fileDownloader.download(fileUrl, destinationFileName).value shouldBe ()
 
       val pathToDownloadedFile = Paths.get(destinationFileName.toString)
       pathToDownloadedFile.toFile.deleteOnExit()

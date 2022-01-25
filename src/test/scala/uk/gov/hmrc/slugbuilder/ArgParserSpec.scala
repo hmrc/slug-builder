@@ -19,7 +19,6 @@ package uk.gov.hmrc.slugbuilder
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.slugbuilder.ArgParser.{Publish, Unpublish}
-import scala.language.implicitConversions
 
 class ArgParserSpec extends AnyWordSpec with Matchers {
 

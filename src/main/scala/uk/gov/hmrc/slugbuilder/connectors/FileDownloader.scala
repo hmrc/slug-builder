@@ -16,13 +16,14 @@
 
 package uk.gov.hmrc.slugbuilder.connectors
 
-import java.nio.file.Paths
 import akka.stream.Materializer
 import akka.stream.scaladsl.FileIO
 import play.api.libs.ws.{StandaloneWSClient, StandaloneWSResponse}
+
+import java.nio.file.Paths
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 
 case class FileUrl(value: String) {

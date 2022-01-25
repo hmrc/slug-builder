@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import cats.implicits._
+import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
+
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.{Files, OpenOption, Path, Paths}
-import cats.implicits._
-import uk.gov.hmrc.slugbuilder.tools.CommandExecutor._
-
 import scala.jdk.CollectionConverters._
 
 class StartDockerScriptCreator(

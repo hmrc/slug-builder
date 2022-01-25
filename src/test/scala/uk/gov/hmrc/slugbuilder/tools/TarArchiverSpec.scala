@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.slugbuilder.tools
 
-import java.nio.file.{Files, Path, Paths}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
+import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters._
 
 class TarArchiverSpec extends AnyWordSpec with Matchers {

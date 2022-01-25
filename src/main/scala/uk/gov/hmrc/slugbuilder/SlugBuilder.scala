@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.{Path, Paths}
-import java.nio.file.StandardOpenOption.CREATE_NEW
-import java.nio.file.attribute.PosixFilePermission._
 import cats.implicits._
 import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
+
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.{Path, Paths}
+import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.attribute.PosixFilePermission._
 
 class SlugBuilder(
   progressReporter: ProgressReporter,

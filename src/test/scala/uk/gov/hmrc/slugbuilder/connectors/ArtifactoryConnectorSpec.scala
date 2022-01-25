@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.slugbuilder.connectors
 
-import java.io.File
-import java.nio.file.{Files, Path, Paths}
-
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, EitherValues}
 import org.scalatest.concurrent.ScalaFutures
@@ -26,12 +23,14 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws.{BodyWritable, StandaloneWSClient, WSAuthScheme}
+import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, ScalaVersion, TestWSRequest}
+import uk.gov.hmrc.slugbuilder.ScalaVersions._
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.{allHttpStatusCodes, nonEmptyStrings, releaseVersionGen, repositoryNameGen}
 import uk.gov.hmrc.slugbuilder.tools._
-import uk.gov.hmrc.slugbuilder.ScalaVersions._
-import uk.gov.hmrc.slugbuilder.{AppConfigBaseFileName, ArtifactFileName, ScalaVersion, TestWSRequest}
 
+import java.io.File
+import java.nio.file.{Files, Path, Paths}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 

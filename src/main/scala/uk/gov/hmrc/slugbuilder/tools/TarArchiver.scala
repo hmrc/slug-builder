@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.slugbuilder.tools
 
-import java.nio.file.Path
 import cats.implicits._
+
+import java.nio.file.Path
 
 class TarArchiver(cliTools: CliTools) {
 

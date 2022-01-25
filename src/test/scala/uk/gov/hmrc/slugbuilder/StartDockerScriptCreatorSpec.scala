@@ -16,15 +16,16 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.StandardOpenOption.CREATE_NEW
-import java.nio.file.{OpenOption, Path, Paths}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.repositoryNameGen
+
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.StandardOpenOption.CREATE_NEW
+import java.nio.file.{OpenOption, Path, Paths}
 
 class StartDockerScriptCreatorSpec
   extends AnyWordSpec
