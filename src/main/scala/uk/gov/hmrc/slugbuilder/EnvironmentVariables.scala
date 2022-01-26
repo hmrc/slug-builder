@@ -27,6 +27,7 @@ object EnvironmentVariables {
   val githubApiToken     : Either[String, String]      = findVariable("GITHUB_API_TOKEN")
   val slugRunnerVersion  : Either[String, String]      = findVariable("SLUG_RUNNER_VERSION")
   val jdkFileName        : Either[String, String]      = findVariable("JDK_FILE_NAME")
+  val artefactLocation   : Either[String, String]      = findVariable("ARTEFACT_LOCATION")
   val includeFiles       : Option[String]              = all.get("INCLUDE_FILES")
   val slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts] = all.get("SLUG_RUNTIME_JAVA_OPTS").map(SlugRuntimeJavaOpts)
 

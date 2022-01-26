@@ -50,10 +50,10 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map("a" -> "b", "c" -> "d"),
         includeFiles        = Some("path/file1"),
+        artefactLocation    = None,
         publish             = false
       ).value shouldBe ()
 
-      progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artefact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
@@ -69,7 +69,8 @@ class SlugBuilderSpec
       verify(fileUtils)
         .setPermissions(
           startDockerFile,
-          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
+        )
 
       verify(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
 
@@ -107,10 +108,10 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts   = None,
         environmentVariables,
         includeFiles          = None,
+        artefactLocation      = None,
         publish               = false
       ).value shouldBe ()
 
-      progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artefact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
@@ -125,7 +126,8 @@ class SlugBuilderSpec
       verify(fileUtils)
         .setPermissions(
           startDockerFile,
-          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
+        )
 
       verify(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
 
@@ -154,10 +156,10 @@ class SlugBuilderSpec
         Some(SlugRuntimeJavaOpts("-Xmx256")),
         buildProperties       = Map("a" -> "b", "c" -> "d"),
         includeFiles          = None,
+        artefactLocation      = None,
         publish               = false
       ).value shouldBe ()
 
-      progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artefact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
@@ -169,14 +171,16 @@ class SlugBuilderSpec
         workspaceDirectory,
         slugDirectory,
         repositoryName,
-        Some(SlugRuntimeJavaOpts("-Xmx256")))
+        Some(SlugRuntimeJavaOpts("-Xmx256"))
+      )
 
       verify(fileUtils).createDir(slugDirectory)
 
       verify(fileUtils)
         .setPermissions(
           startDockerFile,
-          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
+        )
 
       verify(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
 
@@ -202,6 +206,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map("a" -> "b", "c" -> "d"),
         includeFiles        = Some("path/file1"),
+        artefactLocation    = None,
         publish             = true
       ).value shouldBe ()
 
@@ -221,7 +226,8 @@ class SlugBuilderSpec
       verify(fileUtils)
         .setPermissions(
           startDockerFile,
-          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ))
+          Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
+        )
 
       verify(fileUtils).createFile(procFile, "web: ./start-docker.sh", UTF_8, CREATE_NEW)
 
@@ -242,7 +248,7 @@ class SlugBuilderSpec
         .publish(repositoryName, releaseVersion)
     }
 
-    "not create the slug if it already exists in the Webstore" in new Setup {
+    "not create the slug if it already exists in the Webstore when publishing" in new Setup {
       when(artifactoryConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
         .thenReturn(Left("Slug does exist"))
 
@@ -252,16 +258,16 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
-        publish             = false
+        artefactLocation    = None,
+        publish             = true
       ).left.value shouldBe ()
       progressReporter.logs should contain("Slug does exist")
     }
 
     "not create the slug if there is no artefact in the Artifactory" in new Setup {
       when(
-        artifactoryConnector
-          .downloadArtefact(repositoryName, releaseVersion, ArtefactFileName(repositoryName, releaseVersion)))
-        .thenReturn(Left("Artefact does not exist"))
+        artifactoryConnector.downloadArtefact(repositoryName, releaseVersion, ArtefactFileName(repositoryName, releaseVersion))
+      ).thenReturn(Left("Artefact does not exist"))
 
       slugBuilder.create(
         repositoryName,
@@ -269,6 +275,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Artefact does not exist")
@@ -284,6 +291,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("app-config-base does not exist")
@@ -299,6 +307,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(
@@ -315,6 +324,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Some error")
@@ -331,6 +341,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("error message")
@@ -350,6 +361,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(
@@ -366,6 +378,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
@@ -381,6 +394,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(
@@ -397,6 +411,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Error downloading JDK")
@@ -412,6 +427,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Some error")
@@ -427,6 +443,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain(s"Some error")
@@ -442,6 +459,7 @@ class SlugBuilderSpec
         slugRuntimeJavaOpts = None,
         buildProperties     = Map.empty,
         includeFiles        = None,
+        artefactLocation    = None,
         publish             = true
       ).left.value shouldBe ()
       progressReporter.logs should contain(s"Some error")
@@ -458,6 +476,7 @@ class SlugBuilderSpec
           slugRuntimeJavaOpts = None,
           buildProperties     = Map.empty,
           includeFiles        = None,
+          artefactLocation    = None,
           publish             = false
         )
       ) shouldBe error

@@ -46,6 +46,7 @@ class SlugBuilder(
     slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts],
     buildProperties    : Map[String, String],
     includeFiles       : Option[String],
+    artefactLocation   : Option[String],
     publish            : Boolean
   ): Either[Unit, Unit] = {
 
@@ -62,10 +63,14 @@ class SlugBuilder(
     val javaSh              = profileD.resolve("java.sh")
 
     for {
-      _ <- artifactoryConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion)
-             .map(printSuccess)
-      _ <- artifactoryConnector.downloadArtefact(repositoryName, releaseVersion, artefact)
-             .map(printSuccess)
+      _ <- if (publish)
+             artifactoryConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion)
+               .map(printSuccess)
+           else Right(())
+      _ <- (artefactLocation match {
+              case Some(location) => artifactoryConnector.copyLocalArtefact(repositoryName, releaseVersion, location, artefact)
+              case None           => artifactoryConnector.downloadArtefact(repositoryName, releaseVersion, artefact)
+           }).map(printSuccess)
       _ <- githubConnector.downloadAppConfigBase(repositoryName)
              .map(printSuccess)
       _ <- perform(createDir(slugDirectory))

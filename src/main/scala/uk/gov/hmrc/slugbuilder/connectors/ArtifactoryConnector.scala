@@ -52,6 +52,24 @@ class ArtifactoryConnector(
       )
   }
 
+  def copyLocalArtefact(
+    repositoryName: RepositoryName,
+    releaseVersion: ReleaseVersion,
+    location      : String,
+    targetFile    : ArtefactFileName
+  ): Either[String, String] =
+    ScalaVersions.all.map(scalaVersion =>
+      Paths.get(s"$location/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz")
+    ).filter(Files.exists(_)) match {
+      case List(fileLocation) =>
+        Files.copy(fileLocation, Paths.get(targetFile.toString))
+        Right(s"Successfully copied tgz artefact from $fileLocation")
+      case Nil =>
+        Left(s"Could not find tgz artefact in $location.")
+      case items =>
+        Left(s"Artefact found for multiple scala versions")
+      }
+
   def downloadArtefact(
     repositoryName: RepositoryName,
     releaseVersion: ReleaseVersion,
