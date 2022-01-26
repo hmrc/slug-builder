@@ -52,10 +52,10 @@ class ArtifactoryConnector(
       )
   }
 
-  def downloadArtifact(
+  def downloadArtefact(
     repositoryName: RepositoryName,
     releaseVersion: ReleaseVersion,
-    targetFile    : ArtifactFileName
+    targetFile    : ArtefactFileName
   ): Either[String, String] = {
 
     case class DownloadResult(
@@ -78,18 +78,18 @@ class ArtifactoryConnector(
     successfulDownloads match {
       case DownloadResult(_, fileLocation, url, _) :: Nil =>
         Files.move(Paths.get(fileLocation.toString), Paths.get(targetFile.toString))
-        Right(s"Successfully downloaded artifact from $url")
+        Right(s"Successfully downloaded artefact from $url")
       case Nil =>
-        Left(s"Could not find artifact. Errors:\n${failedDownloads.map(result => result.downloadUrl.toString + ": " + result.outcome.swap.map(_.message).getOrElse("")).mkString("\n")}")
+        Left(s"Could not find artefact. Errors:\n${failedDownloads.map(result => result.downloadUrl.toString + ": " + result.outcome.swap.map(_.message).getOrElse("")).mkString("\n")}")
       case items =>
-        Left(s"Multiple artifact versions found for scala versions: ${items.map(_.scalaVersion).mkString(", ")}")
+        Left(s"Multiple artefact versions found for scala versions: ${items.map(_.scalaVersion).mkString(", ")}")
     }
   }
 
   private def slugUrl(webstoreRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
-    s"$artifactoryUri/$webstoreRepoName/slugs/$repositoryName/${slugArtifactFileName(repositoryName, releaseVersion)}"
+    s"$artifactoryUri/$webstoreRepoName/slugs/$repositoryName/${slugArtefactFileName(repositoryName, releaseVersion)}"
 
-  def slugArtifactFileName(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
+  def slugArtefactFileName(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
     s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
 
   def verifySlugNotCreatedYet(
@@ -123,7 +123,7 @@ class ArtifactoryConnector(
         .url(publishUrl)
         .withRequestTimeout(requestTimeout)
         .withAuth(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
-        .put(Paths.get(slugArtifactFileName(repositoryName, releaseVersion)).toFile)
+        .put(Paths.get(slugArtefactFileName(repositoryName, releaseVersion)).toFile)
         .map { response =>
           response.status match {
             case 200 | 201 | 202 | 203 | 204 => Right(s"Successfully published slug to $publishUrl")

@@ -40,7 +40,7 @@ class SlugBuilderSpec
   "create" should {
     "finish successfully if " +
       "slug for the given version of the microservice does not exist and " +
-      "microservice artifact can be downloaded and " +
+      "microservice artefact can be downloaded and " +
       "app-config-base can be downloaded and " +
       "a slug file is assembled" in new Setup {
 
@@ -54,7 +54,7 @@ class SlugBuilderSpec
       ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
-      progressReporter.logs should contain("Artifact downloaded")
+      progressReporter.logs should contain("Artefact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
@@ -86,7 +86,7 @@ class SlugBuilderSpec
       verify(fileUtils)
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
 
-      verify(artifactConnector, never)
+      verify(artifactoryConnector, never)
         .publish(*, *)
     }
 
@@ -111,7 +111,7 @@ class SlugBuilderSpec
       ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
-      progressReporter.logs should contain("Artifact downloaded")
+      progressReporter.logs should contain("Artefact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
@@ -143,7 +143,7 @@ class SlugBuilderSpec
 
     "finish successfully if " +
       "slug for the given version of the microservice does not exist and " +
-      "microservice artifact can be downloaded and " +
+      "microservice artefact can be downloaded and " +
       "app-config-base can be downloaded and " +
       "a slug file is assembled" +
       "and custom JAVA_OPTS property has been provided" in new Setup {
@@ -158,7 +158,7 @@ class SlugBuilderSpec
       ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
-      progressReporter.logs should contain("Artifact downloaded")
+      progressReporter.logs should contain("Artefact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
@@ -193,7 +193,7 @@ class SlugBuilderSpec
     }
 
     "publish" in new Setup {
-      when(artifactConnector.publish(repositoryName, releaseVersion))
+      when(artifactoryConnector.publish(repositoryName, releaseVersion))
         .thenReturn(Right(s"Slug published successfully to https://artifactory/some-slug.tgz"))
 
       slugBuilder.create(
@@ -206,7 +206,7 @@ class SlugBuilderSpec
       ).value shouldBe ()
 
       progressReporter.logs should contain("Slug does not exist")
-      progressReporter.logs should contain("Artifact downloaded")
+      progressReporter.logs should contain("Artefact downloaded")
       progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
@@ -238,12 +238,12 @@ class SlugBuilderSpec
       verify(fileUtils)
         .createFile(javaSh, "PATH=$HOME/.jdk/bin:$PATH\nJAVA_HOME=$HOME/.jdk/", UTF_8, CREATE_NEW)
 
-      verify(artifactConnector)
+      verify(artifactoryConnector)
         .publish(repositoryName, releaseVersion)
     }
 
     "not create the slug if it already exists in the Webstore" in new Setup {
-      when(artifactConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
+      when(artifactoryConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
         .thenReturn(Left("Slug does exist"))
 
       slugBuilder.create(
@@ -257,11 +257,11 @@ class SlugBuilderSpec
       progressReporter.logs should contain("Slug does exist")
     }
 
-    "not create the slug if there is no artifact in the Artifactory" in new Setup {
+    "not create the slug if there is no artefact in the Artifactory" in new Setup {
       when(
-        artifactConnector
-          .downloadArtifact(repositoryName, releaseVersion, ArtifactFileName(repositoryName, releaseVersion)))
-        .thenReturn(Left("Artifact does not exist"))
+        artifactoryConnector
+          .downloadArtefact(repositoryName, releaseVersion, ArtefactFileName(repositoryName, releaseVersion)))
+        .thenReturn(Left("Artefact does not exist"))
 
       slugBuilder.create(
         repositoryName,
@@ -271,7 +271,7 @@ class SlugBuilderSpec
         includeFiles        = None,
         publish             = false
       ).left.value shouldBe ()
-      progressReporter.logs should contain("Artifact does not exist")
+      progressReporter.logs should contain("Artefact does not exist")
     }
 
     "not create the slug if there is app-config-base in the Webstore" in new Setup {
@@ -305,8 +305,8 @@ class SlugBuilderSpec
         s"Couldn't create slug directory at ${slugDirectory.toFile.getName}. Cause: ${exception.getMessage}")
     }
 
-    "return error message when artifact cannot be extracted" in new Setup {
-      when(tarArchiver.decompress(artifactFile, slugDirectory))
+    "return error message when artefact cannot be extracted" in new Setup {
+      when(tarArchiver.decompress(artefactFile, slugDirectory))
         .thenReturn(Left("Some error"))
 
       slugBuilder.create(
@@ -388,7 +388,7 @@ class SlugBuilderSpec
     }
 
     "return error if downloading the JDK fails" in new Setup {
-      when(artifactConnector.downloadJdk(jdkFileName))
+      when(artifactoryConnector.downloadJdk(jdkFileName))
         .thenReturn(Left("Error downloading JDK"))
 
       slugBuilder.create(
@@ -433,7 +433,7 @@ class SlugBuilderSpec
     }
 
     "return error message when the Slug cannot be published" in new Setup {
-      when(artifactConnector.publish(repositoryName, releaseVersion))
+      when(artifactoryConnector.publish(repositoryName, releaseVersion))
         .thenReturn(Left("Some error"))
 
       slugBuilder.create(
@@ -467,7 +467,7 @@ class SlugBuilderSpec
   private trait Setup {
     val repositoryName      = repositoryNameGen.generateOne
     val releaseVersion      = releaseVersionGen.generateOne
-    val artifactFile        = Paths.get(ArtifactFileName(repositoryName, releaseVersion).toString)
+    val artefactFile        = Paths.get(ArtefactFileName(repositoryName, releaseVersion).toString)
     val workspaceDirectory  = Paths.get(".")
     val slugDirectory       = Paths.get("slug")
     val startDockerFile     = slugDirectory.resolve("start-docker.sh")
@@ -489,7 +489,7 @@ class SlugBuilderSpec
         super.printSuccess(message)
       }
     }
-    val artifactConnector        = mock[ArtifactoryConnector    ](withSettings.lenient)
+    val artifactoryConnector     = mock[ArtifactoryConnector    ](withSettings.lenient)
     val githubConnector          = mock[GithubConnector         ](withSettings.lenient)
     val tarArchiver              = mock[TarArchiver             ](withSettings.lenient)
     val startDockerScriptCreator = mock[StartDockerScriptCreator](withSettings.lenient)
@@ -500,32 +500,32 @@ class SlugBuilderSpec
     val slugBuilder =
       new SlugBuilder(
         progressReporter,
-        artifactConnector,
+        artifactoryConnector,
         githubConnector,
         tarArchiver,
         startDockerScriptCreator,
         fileUtils
       )
 
-    when(artifactConnector.slugArtifactFileName(repositoryName, releaseVersion))
+    when(artifactoryConnector.slugArtefactFileName(repositoryName, releaseVersion))
       .thenReturn(s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz")
 
-    when(artifactConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
+    when(artifactoryConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion))
       .thenReturn(Right("Slug does not exist"))
 
-    when(artifactConnector.downloadArtifact(repositoryName, releaseVersion, ArtifactFileName(repositoryName, releaseVersion)))
-      .thenReturn(Right("Artifact downloaded"))
+    when(artifactoryConnector.downloadArtefact(repositoryName, releaseVersion, ArtefactFileName(repositoryName, releaseVersion)))
+      .thenReturn(Right("Artefact downloaded"))
 
     when(githubConnector.downloadAppConfigBase(repositoryName))
       .thenReturn(Right("app-config-base downloaded"))
 
-    when(tarArchiver.decompress(artifactFile, slugDirectory))
-      .thenReturn(Right(s"Successfully decompressed $artifactFile"))
+    when(tarArchiver.decompress(artefactFile, slugDirectory))
+      .thenReturn(Right(s"Successfully decompressed $artefactFile"))
 
     when(startDockerScriptCreator.ensureStartDockerExists(eqTo(workspaceDirectory), eqTo(slugDirectory), eqTo(repositoryName), any))
       .thenReturn(Right("Created new start-docker.sh script"))
 
-    when(artifactConnector.downloadJdk(jdkFileName))
+    when(artifactoryConnector.downloadJdk(jdkFileName))
       .thenReturn(Right(s"Successfully downloaded the JDK"))
 
     when(tarArchiver.decompress(Paths.get("jdk.tgz"), slugDirectory.resolve(".jdk")))

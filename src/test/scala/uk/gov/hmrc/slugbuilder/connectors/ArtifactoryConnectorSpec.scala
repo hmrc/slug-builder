@@ -23,7 +23,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws.{BodyWritable, StandaloneWSClient, WSAuthScheme}
-import uk.gov.hmrc.slugbuilder.{ArtifactFileName, ScalaVersion, TestWSRequest}
+import uk.gov.hmrc.slugbuilder.{ArtefactFileName, ScalaVersion, TestWSRequest}
 import uk.gov.hmrc.slugbuilder.ScalaVersions._
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators.{allHttpStatusCodes, nonEmptyStrings, releaseVersionGen, repositoryNameGen}
@@ -45,7 +45,7 @@ class ArtifactoryConnectorSpec
 
   "verifySlugNotCreatedYet" should {
     "return Left if slug already exists" in new Setup {
-      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtefactFilename"
       (wsClient.url(_: String))
         .expects(url)
         .returning(wsRequest)
@@ -63,7 +63,7 @@ class ArtifactoryConnectorSpec
     }
 
     "return Right if slug does not exist" in new Setup {
-      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtefactFilename"
       (wsClient.url(_: String))
         .expects(url)
         .returning(wsRequest)
@@ -83,7 +83,7 @@ class ArtifactoryConnectorSpec
     "return Left when got unexpected status from checking if slug exists" in {
       allHttpStatusCodes filterNot Seq(200, 404).contains foreach { status =>
         new Setup {
-          val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+          val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtefactFilename"
           (wsClient.url(_: String))
             .expects(url)
             .returning(wsRequest)
@@ -103,7 +103,7 @@ class ArtifactoryConnectorSpec
     }
 
     "return Left if calling webstore results in an exception" in new Setup {
-      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtifactFilename"
+      val url = s"$artifactoryUri/webstore/slugs/$repositoryName/$slugArtefactFilename"
       (wsClient.url(_: String))
         .expects(url)
         .returning(wsRequest)
@@ -118,44 +118,44 @@ class ArtifactoryConnectorSpec
     }
   }
 
-  "downloadArtifact" should {
+  "downloadArtefact" should {
     val fileNotFound = Left[DownloadError, Unit](DownloadError("A file does not exist"))
 
-    "return Right if artifact can be downloaded from Artifactory successfully" in new Setup {
-      stubArtifactDownload(v2_13, fileNotFound)
-      stubArtifactDownload(v2_12, fileNotFound)
-      val fileUrl = stubArtifactDownload(v2_11, Right(()))
+    "return Right if artefact can be downloaded from Artifactory successfully" in new Setup {
+      stubArtefactDownload(v2_13, fileNotFound)
+      stubArtefactDownload(v2_12, fileNotFound)
+      val fileUrl = stubArtefactDownload(v2_11, Right(()))
 
-      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).value should include(s"Successfully downloaded artifact from $fileUrl")
+      connector.downloadArtefact(repositoryName, releaseVersion, targetFile).value should include(s"Successfully downloaded artefact from $fileUrl")
     }
 
-    "return Left if there is no artifact" in new Setup {
-      stubArtifactDownload(v2_13, fileNotFound)
-      stubArtifactDownload(v2_12, fileNotFound)
-      stubArtifactDownload(v2_11, fileNotFound)
-      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).left.value should include("Could not find artifact.")
+    "return Left if there is no artefact" in new Setup {
+      stubArtefactDownload(v2_13, fileNotFound)
+      stubArtefactDownload(v2_12, fileNotFound)
+      stubArtefactDownload(v2_11, fileNotFound)
+      connector.downloadArtefact(repositoryName, releaseVersion, targetFile).left.value should include("Could not find artefact.")
     }
 
     "return Left if more then one " in new Setup {
-      stubArtifactDownload(v2_13, Right(()))
-      stubArtifactDownload(v2_12, fileNotFound)
-      stubArtifactDownload(v2_11, Right(()))
-      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).left.value should include("Multiple artifact versions found")
+      stubArtefactDownload(v2_13, Right(()))
+      stubArtefactDownload(v2_12, fileNotFound)
+      stubArtefactDownload(v2_11, Right(()))
+      connector.downloadArtefact(repositoryName, releaseVersion, targetFile).left.value should include("Multiple artefact versions found")
     }
 
-    "return Left if there was an error when downloading the artifact from Artifactory" in new Setup {
+    "return Left if there was an error when downloading the artefact from Artifactory" in new Setup {
       val downloadingProblem = DownloadError("downloading problem")
-      stubArtifactDownload(v2_13, Left(downloadingProblem))
-      stubArtifactDownload(v2_12, fileNotFound)
-      stubArtifactDownload(v2_11, fileNotFound)
+      stubArtefactDownload(v2_13, Left(downloadingProblem))
+      stubArtefactDownload(v2_12, fileNotFound)
+      stubArtefactDownload(v2_11, fileNotFound)
 
-      connector.downloadArtifact(repositoryName, releaseVersion, targetFile).left.value should include("downloading problem")
+      connector.downloadArtefact(repositoryName, releaseVersion, targetFile).left.value should include("downloading problem")
     }
   }
 
   "publish" should {
     "do a PUT with proper authentication" in new Setup {
-      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
+      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtefactFilename"
       (wsClient.url(_: String))
         .expects(slugUrl)
         .returning(wsRequest)
@@ -185,7 +185,7 @@ class ArtifactoryConnectorSpec
     }
 
     "handle errors" in new Setup {
-      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtifactFilename"
+      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtefactFilename"
       (wsClient.url(_: String))
         .expects(slugUrl)
         .returning(wsRequest)
@@ -233,13 +233,13 @@ class ArtifactoryConnectorSpec
     val artifactoryUsername  = "username"
     val artifactoryPassword  = "password"
     val slugRunnerVersion    = nonEmptyStrings.generateOne
-    val artifactName         = nonEmptyStrings.generateOne
+    val artefactName         = nonEmptyStrings.generateOne
     val wsClient             = mock[StandaloneWSClient]
     val repositoryName       = repositoryNameGen.generateOne
     val releaseVersion       = releaseVersionGen.generateOne
     val jdkFileName          = "jdk.tgz"
-    val slugArtifactFilename = s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
-    val targetFile = ArtifactFileName(repositoryName, releaseVersion)
+    val slugArtefactFilename = s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
+    val targetFile = ArtefactFileName(repositoryName, releaseVersion)
     val progressReporter = new ProgressReporterStub
 
     val fileDownloader = mock[FileDownloader]
@@ -257,18 +257,18 @@ class ArtifactoryConnectorSpec
     val wsRequest  = mock[TestWSRequest]
     val wsResponse = mock[wsRequest.Response]
 
-    def stubArtifactDownload(scalaVersion: ScalaVersion, outcome: Either[DownloadError, Unit]): FileUrl = {
+    def stubArtefactDownload(scalaVersion: ScalaVersion, outcome: Either[DownloadError, Unit]): FileUrl = {
       val fileUrl = FileUrl(
         s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz"
       )
-      val artifactName = ArtifactFileName(repositoryName, releaseVersion).toString
-      val destinationFileName = DestinationFileName(artifactName + "_" + scalaVersion)
+      val artefactName = ArtefactFileName(repositoryName, releaseVersion).toString
+      val destinationFileName = DestinationFileName(artefactName + "_" + scalaVersion)
       (fileDownloader.download _)
         .expects(fileUrl, *, *)
         .onCall { (_, destinationFile, _) =>
           outcome match {
             case outcome: Right[DownloadError, Unit] =>
-              files = Paths.get(artifactName) :: Files.createFile(Paths.get(destinationFile.toString)) :: files
+              files = Paths.get(artefactName) :: Files.createFile(Paths.get(destinationFile.toString)) :: files
               outcome
             case _ => outcome
           }

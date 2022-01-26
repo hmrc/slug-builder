@@ -21,10 +21,14 @@ import java.nio.file.{Files, OpenOption, Path}
 import java.nio.file.attribute.PosixFilePermission
 
 import scala.jdk.CollectionConverters._
+import java.io.IOException
 
 class FileUtils {
   def createDir(dir: Path): Unit =
-    if (Files.exists(dir)) () else dir.toFile.mkdir()
+    if (!Files.exists(dir)) {
+      val res = dir.toFile.mkdirs()
+      if (!res) throw new IOException(s"Failed to create $dir")
+    }
 
   def setPermissions(file: Path, permissions: Set[PosixFilePermission]): Unit =
     Files.setPosixFilePermissions(file, permissions.asJava)

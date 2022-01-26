@@ -52,12 +52,17 @@ object ReleaseVersion {
       }
 }
 
-case class ArtifactFileName(repositoryName: RepositoryName, releaseVersion: ReleaseVersion) {
-  override def toString: String = s"$repositoryName-$releaseVersion.tgz"
+case class ArtefactFileName(
+  repositoryName: RepositoryName,
+  releaseVersion: ReleaseVersion
+) {
+  override def toString: String =
+    s"$repositoryName-$releaseVersion.tgz"
 }
 
 case class AppConfigBaseFileName(repositoryName: RepositoryName) {
-  override def toString: String = s"$repositoryName.conf"
+  override def toString: String =
+    s"$repositoryName.conf"
 }
 
 case class SlugRuntimeJavaOpts(value : String) {
