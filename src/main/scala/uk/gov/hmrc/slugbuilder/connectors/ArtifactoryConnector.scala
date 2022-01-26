@@ -42,16 +42,6 @@ class ArtifactoryConnector(
   private val webstoreVirtualRepo = "webstore"
   private val webstoreLocalRepo   = "webstore-local"
 
-  def downloadAppConfigBase(repositoryName: RepositoryName): Either[String, String] = {
-    val fileUrl = FileUrl(s"$artifactoryUri/$webstoreVirtualRepo/app-config-base/$repositoryName.conf")
-    fileDownloader
-      .download(fileUrl, DestinationFileName(AppConfigBaseFileName(repositoryName).toString))
-      .bimap(
-        downloadError => s"app-config-base couldn't be downloaded from $fileUrl. Cause: $downloadError",
-        _             => s"Successfully downloaded app-config-base from $fileUrl"
-      )
-  }
-
   def downloadJdk(targetFile: String): Either[String, String] = {
     val javaDownloadUri = FileUrl(s"$artifactoryUri/$webstoreVirtualRepo/java/$jdkFileName")
     fileDownloader
@@ -90,11 +80,10 @@ class ArtifactoryConnector(
         Files.move(Paths.get(fileLocation.toString), Paths.get(targetFile.toString))
         Right(s"Successfully downloaded artifact from $url")
       case Nil =>
-        Left(s"Could not find artifact. Errors: ${failedDownloads.map(result => result.scalaVersion.toString + ":" + result.outcome.swap.map(_.message).getOrElse("")).mkString(", ")}")
+        Left(s"Could not find artifact. Errors:\n${failedDownloads.map(result => result.downloadUrl.toString + ": " + result.outcome.swap.map(_.message).getOrElse("")).mkString("\n")}")
       case items =>
-        Left(s"Multiple artifact versions found: ${items.map(_.scalaVersion).mkString(", ")}")
+        Left(s"Multiple artifact versions found for scala versions: ${items.map(_.scalaVersion).mkString(", ")}")
     }
-
   }
 
   private def slugUrl(webstoreRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
@@ -115,7 +104,7 @@ class ArtifactoryConnector(
         .map(_.status)
         .map {
           case 200    => Left(s"Slug already exists at: $publishUrl")
-          case 404    => Right(s"No slug created yet at $publishUrl")
+          case 404    => Right(s"Confirmed no slug created yet at $publishUrl")
           case status => Left(s"Cannot check if slug exists at $publishUrl. Returned status $status")
         }
         .recover {
@@ -143,29 +132,6 @@ class ArtifactoryConnector(
                 s"PUT to $publishUrl returned with errors: ${Json.stringify(Json.parse(response.body))}"
               )
               Left(s"Could not publish slug to $publishUrl. Returned status $status")
-          }
-        },
-      requestTimeout
-    )
-  }
-
-  def unpublish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
-    val unpublishUrl = slugUrl(webstoreLocalRepo, repositoryName, releaseVersion)
-
-    Await.result(
-      wsClient
-        .url(unpublishUrl)
-        .withAuth(artifactoryUsername, artifactoryPassword, WSAuthScheme.BASIC)
-        .delete()
-        .map { response =>
-          response.status match {
-            case 204 => Right(s"Slug unpublished successfully from $unpublishUrl")
-            case 404 => Right(s"Nothing to do: slug does not exist in $unpublishUrl")
-            case status =>
-              progressReporter.printError(
-                s"DELETE from $unpublishUrl returned with errors: ${Json.stringify(Json.parse(response.body))}"
-              )
-              Left(s"Could not unpublish slug from $unpublishUrl. Returned status $status")
           }
         },
       requestTimeout

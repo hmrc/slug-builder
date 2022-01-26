@@ -17,9 +17,8 @@
 package uk.gov.hmrc.slugbuilder
 
 import cats.implicits._
-import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
-import uk.gov.hmrc.slugbuilder.tools.CommandExecutor.perform
-import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
+import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, GithubConnector}
+import uk.gov.hmrc.slugbuilder.tools.{CommandExecutor, FileUtils, TarArchiver}
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Path, Paths}
@@ -27,15 +26,16 @@ import java.nio.file.StandardOpenOption.CREATE_NEW
 import java.nio.file.attribute.PosixFilePermission._
 
 class SlugBuilder(
-  progressReporter: ProgressReporter,
-  artifactoryConnector: ArtifactoryConnector,
-  archiver: TarArchiver,
+  progressReporter        : ProgressReporter,
+  artifactoryConnector    : ArtifactoryConnector,
+  githubConnector         : GithubConnector,
+  archiver                : TarArchiver,
   startDockerScriptCreator: StartDockerScriptCreator,
-  fileUtils: FileUtils) {
-
-  import artifactoryConnector._
-  import fileUtils._
-  import progressReporter._
+  fileUtils               : FileUtils
+) {
+  import CommandExecutor.perform
+  import fileUtils.{createDir, createFile, setPermissions}
+  import progressReporter.{printError, printSuccess}
 
   private val startDockerPermissions =
     Set(OWNER_EXECUTE, OWNER_READ, OWNER_WRITE, GROUP_EXECUTE, GROUP_READ, OTHERS_EXECUTE, OTHERS_READ)
@@ -45,7 +45,8 @@ class SlugBuilder(
     releaseVersion     : ReleaseVersion,
     slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts],
     buildProperties    : Map[String, String],
-    includeFiles       : Option[String]
+    includeFiles       : Option[String],
+    publish            : Boolean
   ): Either[Unit, Unit] = {
 
     val artifact            = ArtifactFileName(repositoryName, releaseVersion)
@@ -61,51 +62,49 @@ class SlugBuilder(
     val javaSh              = profileD.resolve("java.sh")
 
     for {
-      _ <- verifySlugNotCreatedYet(repositoryName, releaseVersion)
+      _ <- artifactoryConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion)
              .map(printSuccess)
-      _ <- downloadArtifact(repositoryName, releaseVersion, artifact)
+      _ <- artifactoryConnector.downloadArtifact(repositoryName, releaseVersion, artifact)
              .map(printSuccess)
-      _ <- downloadAppConfigBase(repositoryName)
+      _ <- githubConnector.downloadAppConfigBase(repositoryName)
              .map(printSuccess)
       _ <- perform(createDir(slugDirectory))
-             .leftMap(exception =>
-               s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
+             .leftMap(exception => s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
       _ <- archiver.decompress(Paths.get(artifact.toString), slugDirectory)
              .map(printSuccess)
       _ <- startDockerScriptCreator.ensureStartDockerExists(
-            workspaceDirectory,
-            slugDirectory,
-            repositoryName,
-            slugRuntimeJavaOpts)
-              .map(printSuccess)
+             workspaceDirectory,
+             slugDirectory,
+             repositoryName,
+             slugRuntimeJavaOpts
+           ).map(printSuccess)
       _ <- perform(setPermissions(startDockerFile, startDockerPermissions))
-             .leftMap(exception =>
-               s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
+             .leftMap(exception => s"Couldn't change permissions of the $startDockerFile. Cause: ${exception.getMessage}")
       _ <- perform(createFile(procFile, s"web: ./${startDockerFile.toFile.getName}", UTF_8, CREATE_NEW))
             .leftMap(exception => s"Couldn't create the $procFile. Cause: ${exception.getMessage}")
       _ <- perform(
-            createFile(buildPropertiesFile, mapToString(removeSensitiveProperties(buildProperties)), UTF_8, CREATE_NEW))
-            .leftMap(exception => s"Couldn't create the $buildPropertiesFile. Cause: ${exception.getMessage}")
+             createFile(buildPropertiesFile, mapToString(removeSensitiveProperties(buildProperties)), UTF_8, CREATE_NEW)
+           ).leftMap(exception => s"Couldn't create the $buildPropertiesFile. Cause: ${exception.getMessage}")
       _ <- perform(copyFiles(includeFiles, slugDirectory))
              .leftMap(exception => s"Couldn't copy include files. Cause: ${exception.getMessage}")
              .map(printSuccess)
       _ <- perform(createDir(jdkDirectory))
-             .leftMap(exception =>
-               s"Couldn't create .jdk directory at $jdkDirectory. Cause: ${exception.getMessage}")
-      _ <- downloadJdk(jdk.toString)
+             .leftMap(exception => s"Couldn't create .jdk directory at $jdkDirectory. Cause: ${exception.getMessage}")
+      _ <- artifactoryConnector.downloadJdk(jdk.toString)
              .map(printSuccess)
       _ <- archiver.decompress(jdk, jdkDirectory)
              .map(printSuccess)
       _ <- perform(createDir(profileD))
-             .leftMap(exception =>
-               s"Couldn't create $profileD directory. Cause: ${exception.getMessage}")
+             .leftMap(exception => s"Couldn't create $profileD directory. Cause: ${exception.getMessage}")
       _ <- perform(createJavaSh(javaSh))
-            .leftMap(exception => s"Couldn't create the $javaSh. Cause: ${exception.getMessage}")
-            .map(_ => printSuccess(s"Successfully created .profile.d/java.sh"))
+             .leftMap(exception => s"Couldn't create the $javaSh. Cause: ${exception.getMessage}")
+             .map(_ => printSuccess(s"Successfully created .profile.d/java.sh"))
       _ <- archiver.compress(slugTgzFile, slugDirectory)
              .map(printSuccess)
-      _ <- artifactoryConnector.publish(repositoryName, releaseVersion)
-             .map(printSuccess)
+      _ <- if (publish)
+             artifactoryConnector.publish(repositoryName, releaseVersion)
+               .map(printSuccess)
+           else Right(())
     } yield ()
   }.leftMap(printError)
 

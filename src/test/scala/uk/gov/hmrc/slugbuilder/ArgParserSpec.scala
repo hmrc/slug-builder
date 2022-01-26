@@ -18,11 +18,19 @@ package uk.gov.hmrc.slugbuilder
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.slugbuilder.ArgParser.{Publish, Unpublish}
+import uk.gov.hmrc.slugbuilder.ArgParser.{Build, Publish}
 
 class ArgParserSpec extends AnyWordSpec with Matchers {
 
   "ArgParser" should {
+    "create correct Build config" in {
+      ArgParser.parse("build repoName 0.1.0") shouldBe Right(
+        Build(
+          repositoryName = RepositoryName("repoName"),
+          releaseVersion = ReleaseVersion("0.1.0")
+        ))
+    }
+
     "create correct Publish config" in {
       ArgParser.parse("publish repoName 0.1.0") shouldBe Right(
         Publish(
@@ -31,17 +39,9 @@ class ArgParserSpec extends AnyWordSpec with Matchers {
         ))
     }
 
-    "create correct Unpublish config" in {
-      ArgParser.parse("unpublish repoName 0.1.0") shouldBe Right(
-        Unpublish(
-          repositoryName = RepositoryName("repoName"),
-          releaseVersion = ReleaseVersion("0.1.0")
-        ))
-    }
-
     "fail if incorrect command is passed" in {
       ArgParser.parse("incorrect-command repoName 0.1.0") shouldBe Left(
-        "Please supply 'publish' or 'unpublish' as the first argument"
+        "Please supply 'build' or 'publish' as the first argument"
       )
     }
 
