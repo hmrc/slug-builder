@@ -46,31 +46,36 @@ class SlugBuilder(
     slugRuntimeJavaOpts: Option[SlugRuntimeJavaOpts],
     buildProperties    : Map[String, String],
     includeFiles       : Option[String],
+    artefactLocation   : Option[String],
     publish            : Boolean
   ): Either[Unit, Unit] = {
 
-    val artifact            = ArtifactFileName(repositoryName, releaseVersion)
+    val artefact            = ArtefactFileName(repositoryName, releaseVersion)
     val jdk                 = Paths.get("jdk.tgz")
     val workspaceDirectory  = Paths.get(".")
     val slugDirectory       = Paths.get("slug")
     val startDockerFile     = slugDirectory.resolve(Paths.get("start-docker.sh"))
     val procFile            = slugDirectory.resolve(Paths.get("Procfile"))
     val buildPropertiesFile = slugDirectory.resolve(Paths.get("build.properties"))
-    val slugTgzFile         = Paths.get(artifactoryConnector.slugArtifactFileName(repositoryName, releaseVersion))
+    val slugTgzFile         = Paths.get(artifactoryConnector.slugArtefactFileName(repositoryName, releaseVersion))
     val jdkDirectory        = slugDirectory.resolve(".jdk")
     val profileD            = slugDirectory.resolve(".profile.d")
     val javaSh              = profileD.resolve("java.sh")
 
     for {
-      _ <- artifactoryConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion)
-             .map(printSuccess)
-      _ <- artifactoryConnector.downloadArtifact(repositoryName, releaseVersion, artifact)
-             .map(printSuccess)
+      _ <- if (publish)
+             artifactoryConnector.verifySlugNotCreatedYet(repositoryName, releaseVersion)
+               .map(printSuccess)
+           else Right(())
+      _ <- (artefactLocation match {
+              case Some(location) => artifactoryConnector.copyLocalArtefact(repositoryName, releaseVersion, location, artefact)
+              case None           => artifactoryConnector.downloadArtefact(repositoryName, releaseVersion, artefact)
+           }).map(printSuccess)
       _ <- githubConnector.downloadAppConfigBase(repositoryName)
              .map(printSuccess)
       _ <- perform(createDir(slugDirectory))
              .leftMap(exception => s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
-      _ <- archiver.decompress(Paths.get(artifact.toString), slugDirectory)
+      _ <- archiver.decompress(Paths.get(artefact.toString), slugDirectory)
              .map(printSuccess)
       _ <- startDockerScriptCreator.ensureStartDockerExists(
              workspaceDirectory,

@@ -3,7 +3,7 @@
 
  [ ![Download](https://api.bintray.com/packages/hmrc/releases/slug-builder/images/download.svg) ](https://bintray.com/hmrc/releases/slug-builder/_latestVersion)
 
-This is a tool to be used in command line to create and publish *slug* artifacts for a given microservice.
+This is a tool to be used in command line to create and publish *slug* artefacts for a given microservice.
 
 # How to create an executable fat jar?
 

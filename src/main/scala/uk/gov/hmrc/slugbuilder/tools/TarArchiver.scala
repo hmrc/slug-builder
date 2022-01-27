@@ -27,7 +27,7 @@ class TarArchiver(cliTools: CliTools) {
       .run(Array("tar", if (preservePermissions) "-pxzf" else "-xzf", tgzFile.toString, "-C", outputDirectory.toString))
       .bimap(
         error => s"Couldn't decompress $tgzFile. Cause: $error",
-        _ => s"Successfully decompressed $tgzFile"
+        _     => s"Successfully decompressed $tgzFile"
       )
 
   def compress(tgzFile: Path, inputDirectory: Path): Either[String, String] =
@@ -35,7 +35,6 @@ class TarArchiver(cliTools: CliTools) {
       .run(Array("tar", "--exclude='./.git'", "-C", inputDirectory.toString, "-czf", tgzFile.toString, "."))
       .bimap(
         error => s"Couldn't compress $inputDirectory. Cause: $error",
-        _ => s"Successfully compressed the $inputDirectory"
+        _     => s"Successfully compressed the $inputDirectory to $tgzFile"
       )
-
 }

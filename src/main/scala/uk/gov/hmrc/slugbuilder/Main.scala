@@ -33,6 +33,7 @@ object Main {
   private val githubApiToken       = EnvironmentVariables.githubApiToken.getOrExit
   private val jdkFileName          = EnvironmentVariables.jdkFileName.getOrExit
   private val slugRuntimeJavaOpts  = EnvironmentVariables.slugRuntimeJavaOpts
+  private val artefactLocation     = EnvironmentVariables.artefactLocation.toOption
   private val environmentVariables = EnvironmentVariables.all
   private val includeFiles         = EnvironmentVariables.includeFiles
 
@@ -72,10 +73,26 @@ object Main {
     (ArgParser.parse(args).getOrExit match {
       case Build(repositoryName, releaseVersion) =>
         slugBuilder
-          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables, includeFiles, publish = false)
+          .create(
+            repositoryName,
+            releaseVersion,
+            slugRuntimeJavaOpts,
+            environmentVariables,
+            includeFiles,
+            artefactLocation,
+            publish = false
+          )
       case Publish(repositoryName, releaseVersion) =>
         slugBuilder
-          .create(repositoryName, releaseVersion, slugRuntimeJavaOpts, environmentVariables, includeFiles, publish = true)
+          .create(
+            repositoryName,
+            releaseVersion,
+            slugRuntimeJavaOpts,
+            environmentVariables,
+            includeFiles,
+            artefactLocation,
+            publish = true
+          )
     }).fold(
       _ => sys.exit(1),
       _ => sys.exit(0)

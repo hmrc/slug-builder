@@ -29,7 +29,7 @@ class ModelSpec
   "apply" should {
     "return a String comprised of repositoryName and releaseVersion" in {
       forAll(repositoryNameGen, releaseVersionGen) { (repositoryName, releaseVersion) =>
-        ArtifactFileName(repositoryName, releaseVersion).toString shouldBe s"$repositoryName-$releaseVersion.tgz"
+        ArtefactFileName(repositoryName, releaseVersion).toString shouldBe s"$repositoryName-$releaseVersion.tgz"
       }
     }
   }
