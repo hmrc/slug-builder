@@ -19,7 +19,7 @@ package uk.gov.hmrc.slugbuilder
 import akka.actor.ActorSystem
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import uk.gov.hmrc.slugbuilder.ArgParser.{Build, Publish}
-import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, FileDownloader, GithubConnector}
+import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, FileDownloader}
 import uk.gov.hmrc.slugbuilder.tools.{CliTools, FileUtils, TarArchiver}
 
 object Main {
@@ -30,7 +30,6 @@ object Main {
   private val artifactoryUri       = EnvironmentVariables.artifactoryUri.getOrExit
   private val artifactoryUsername  = EnvironmentVariables.artifactoryUsername.getOrExit
   private val artifactoryPassword  = EnvironmentVariables.artifactoryPassword.getOrExit
-  private val githubApiToken       = EnvironmentVariables.githubApiToken.getOrExit
   private val jdkFileName          = EnvironmentVariables.jdkFileName.getOrExit
   private val slugRuntimeJavaOpts  = EnvironmentVariables.slugRuntimeJavaOpts
   private val artefactLocation     = EnvironmentVariables.artefactLocation.toOption
@@ -54,16 +53,9 @@ object Main {
       progressReporter
     )
 
-  private val githubConnector =
-    new GithubConnector(
-      fileDownloader,
-      githubApiToken
-    )
-
   private lazy val slugBuilder = new SlugBuilder(
     progressReporter,
     artifactoryConnector,
-    githubConnector,
     new TarArchiver(new CliTools(progressReporter)),
     new StartDockerScriptCreator(),
     new FileUtils()

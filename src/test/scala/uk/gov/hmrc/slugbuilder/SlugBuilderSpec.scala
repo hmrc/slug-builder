@@ -20,7 +20,7 @@ import org.mockito.scalatest.MockitoSugar
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, GithubConnector}
+import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.generators.Generators.Implicits._
 import uk.gov.hmrc.slugbuilder.generators.Generators._
 import uk.gov.hmrc.slugbuilder.tools.{FileUtils, TarArchiver}
@@ -55,7 +55,6 @@ class SlugBuilderSpec
       ).value shouldBe ()
 
       progressReporter.logs should contain("Artefact downloaded")
-      progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
@@ -113,7 +112,6 @@ class SlugBuilderSpec
       ).value shouldBe ()
 
       progressReporter.logs should contain("Artefact downloaded")
-      progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
@@ -161,7 +159,6 @@ class SlugBuilderSpec
       ).value shouldBe ()
 
       progressReporter.logs should contain("Artefact downloaded")
-      progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
@@ -212,7 +209,6 @@ class SlugBuilderSpec
 
       progressReporter.logs should contain("Slug does not exist")
       progressReporter.logs should contain("Artefact downloaded")
-      progressReporter.logs should contain("app-config-base downloaded")
       progressReporter.logs should contain("Successfully downloaded the JDK")
       progressReporter.logs should contain("Successfully decompressed jdk.tgz")
       progressReporter.logs should contain("Successfully created .profile.d/java.sh")
@@ -279,22 +275,6 @@ class SlugBuilderSpec
         publish             = false
       ).left.value shouldBe ()
       progressReporter.logs should contain("Artefact does not exist")
-    }
-
-    "not create the slug if there is app-config-base in the Webstore" in new Setup {
-      when(githubConnector.downloadAppConfigBase(repositoryName))
-        .thenReturn(Left("app-config-base does not exist"))
-
-      slugBuilder.create(
-        repositoryName,
-        releaseVersion,
-        slugRuntimeJavaOpts = None,
-        buildProperties     = Map.empty,
-        includeFiles        = None,
-        artefactLocation    = None,
-        publish             = false
-      ).left.value shouldBe ()
-      progressReporter.logs should contain("app-config-base does not exist")
     }
 
     "return error message when slug directory cannot be created" in new Setup {
@@ -509,7 +489,6 @@ class SlugBuilderSpec
       }
     }
     val artifactoryConnector     = mock[ArtifactoryConnector    ](withSettings.lenient)
-    val githubConnector          = mock[GithubConnector         ](withSettings.lenient)
     val tarArchiver              = mock[TarArchiver             ](withSettings.lenient)
     val startDockerScriptCreator = mock[StartDockerScriptCreator](withSettings.lenient)
     val fileUtils                = mock[FileUtils               ](withSettings.lenient)
@@ -520,7 +499,6 @@ class SlugBuilderSpec
       new SlugBuilder(
         progressReporter,
         artifactoryConnector,
-        githubConnector,
         tarArchiver,
         startDockerScriptCreator,
         fileUtils
@@ -534,9 +512,6 @@ class SlugBuilderSpec
 
     when(artifactoryConnector.downloadArtefact(repositoryName, releaseVersion, ArtefactFileName(repositoryName, releaseVersion)))
       .thenReturn(Right("Artefact downloaded"))
-
-    when(githubConnector.downloadAppConfigBase(repositoryName))
-      .thenReturn(Right("app-config-base downloaded"))
 
     when(tarArchiver.decompress(artefactFile, slugDirectory))
       .thenReturn(Right(s"Successfully decompressed $artefactFile"))

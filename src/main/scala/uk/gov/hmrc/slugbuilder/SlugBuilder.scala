@@ -17,7 +17,7 @@
 package uk.gov.hmrc.slugbuilder
 
 import cats.implicits._
-import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, GithubConnector}
+import uk.gov.hmrc.slugbuilder.connectors.ArtifactoryConnector
 import uk.gov.hmrc.slugbuilder.tools.{CommandExecutor, FileUtils, TarArchiver}
 
 import java.nio.charset.StandardCharsets.UTF_8
@@ -28,7 +28,6 @@ import java.nio.file.attribute.PosixFilePermission._
 class SlugBuilder(
   progressReporter        : ProgressReporter,
   artifactoryConnector    : ArtifactoryConnector,
-  githubConnector         : GithubConnector,
   archiver                : TarArchiver,
   startDockerScriptCreator: StartDockerScriptCreator,
   fileUtils               : FileUtils
@@ -71,8 +70,6 @@ class SlugBuilder(
               case Some(location) => artifactoryConnector.copyLocalArtefact(repositoryName, releaseVersion, location, artefact)
               case None           => artifactoryConnector.downloadArtefact(repositoryName, releaseVersion, artefact)
            }).map(printSuccess)
-      _ <- githubConnector.downloadAppConfigBase(repositoryName)
-             .map(printSuccess)
       _ <- perform(createDir(slugDirectory))
              .leftMap(exception => s"Couldn't create slug directory at $slugDirectory. Cause: ${exception.getMessage}")
       _ <- archiver.decompress(Paths.get(artefact.toString), slugDirectory)
@@ -138,7 +135,7 @@ class SlugBuilder(
     optFileCsv.
       fold("No files to copy"){ fileCsv =>
         val files = fileCsv.split(",").map(Paths.get(_))
-        files.map(fileUtils.copyFile(_, targetDirectory))
+        files.foreach(fileUtils.copyFile(_, targetDirectory))
         s"Copied ${files.map(_.toString).mkString(", ")} into $targetDirectory"
       }
 }

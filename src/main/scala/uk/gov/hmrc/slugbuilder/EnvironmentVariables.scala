@@ -24,7 +24,6 @@ object EnvironmentVariables {
   val artifactoryUri     : Either[String, String]      = findVariable("ARTIFACTORY_URI")
   val artifactoryUsername: Either[String, String]      = findVariable("ARTIFACTORY_USERNAME")
   val artifactoryPassword: Either[String, String]      = findVariable("ARTIFACTORY_PASSWORD")
-  val githubApiToken     : Either[String, String]      = findVariable("GITHUB_API_TOKEN")
   val slugRunnerVersion  : Either[String, String]      = findVariable("SLUG_RUNNER_VERSION")
   val jdkFileName        : Either[String, String]      = findVariable("JDK_FILE_NAME")
   val artefactLocation   : Either[String, String]      = findVariable("ARTEFACT_LOCATION")
