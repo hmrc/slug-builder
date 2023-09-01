@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 
 package uk.gov.hmrc.slugbuilder
-
-import cats.implicits._
 
 case class RepositoryName private (value: String) {
   override val toString: String = value
@@ -74,15 +72,15 @@ case class ScalaVersion(value: String) {
 }
 
 object ScalaVersions {
-  val v2_13 = ScalaVersion("2.13")
+  val v2_13: ScalaVersion = ScalaVersion("2.13")
 
-  val v2_12 = ScalaVersion("2.12")
+  val v2_12: ScalaVersion = ScalaVersion("2.12")
 
-  val v2_11 = ScalaVersion("2.11")
+  val v2_11: ScalaVersion = ScalaVersion("2.11")
 
   /**
     * This list require to have older version in later positions
     */
-  val all = List(v2_13, v2_12, v2_11)
+  val all: List[ScalaVersion] = List(v2_13, v2_12, v2_11)
 
 }
