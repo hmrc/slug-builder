@@ -57,10 +57,6 @@ class StartDockerScriptCreator(
       .leftMap(exception => s"Couldn't check if $startDockerFileInWorkspace exists. Cause: ${exception.getMessage}")
       .flatMap { useProvidedStartDocker =>
         for {
-          _ <- perform(create(confDirectory))
-                 .leftMap(exception =>s"Couldn't create conf directory at $confDirectory. Cause: ${exception.getMessage}")
-          _ <- perform(move(appConfigBase, confDirectory resolve appConfigBase))
-                 .leftMap(exception => s"Couldn't move $appConfigBase to $confDirectory. Cause: $exception")
           _ <- if (useProvidedStartDocker)
                 perform(copy(startDockerFileInWorkspace, startDockerFileInSlug))
                   .leftMap(exception => s"Couldn't copy the $startDockerFileInWorkspace script to the slug directory. Cause: $exception")
