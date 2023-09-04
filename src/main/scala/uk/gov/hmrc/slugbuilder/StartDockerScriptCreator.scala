@@ -44,7 +44,7 @@ class StartDockerScriptCreator(
     val startDockerFileInWorkspace = workspace resolve Paths.get("start-docker.sh")
     val startDockerFileInSlug      = slugDirectory resolve Paths.get("start-docker.sh")
     val appConfigBase              = Paths.get(AppConfigBaseFileName(repositoryName).toString)
-    val appConfigBaseContent       = Seq("""include "application.conf"""")
+    val appConfigBaseContent       = Seq("include \"application.conf\"\n")
     val confDirectory              = slugDirectory resolve "conf"
     val startDockerContent =
       Seq(

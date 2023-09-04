@@ -226,7 +226,7 @@ class StartDockerScriptCreatorSpec
     val startDockerSh            = slugDirectory resolve "start-docker.sh"
     val confDirectory            = slugDirectory resolve "conf"
     val appConfigBase            = Paths.get(AppConfigBaseFileName(repositoryName).toString)
-    val appConfigBaseContent     = Seq("""include "application.conf"""")
+    val appConfigBaseContent     = Seq("include \"application.conf\"\n")
 
     val createDir            = mockFunction[Path, Unit]
     val checkFileExist       = mockFunction[Path, Boolean]
