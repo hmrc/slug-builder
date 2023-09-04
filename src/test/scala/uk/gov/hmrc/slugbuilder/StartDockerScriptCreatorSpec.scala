@@ -39,6 +39,14 @@ class StartDockerScriptCreatorSpec
         .expects(startDockerShInWorkspace)
         .returning(true)
 
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      createFile
+        .expects(confDirectory.resolve(appConfigBase), appConfigBaseContent, UTF_8, CREATE_NEW)
+        .returning(())
+
       copy
         .expects(startDockerShInWorkspace, startDockerSh)
         .returning(())
@@ -48,13 +56,21 @@ class StartDockerScriptCreatorSpec
     }
 
     "create the 'conf' directory under 'slug', " +
-      "move app-config-base into it and " +
+      "create app-config-base file in it and " +
       "create a new 'start-docker.sh' " +
       "if the 'start-docker.sh' doesn't exist" in new Setup {
 
       checkFileExist
         .expects(startDockerShInWorkspace)
         .returning(false)
+
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      createFile
+        .expects(confDirectory.resolve(appConfigBase), appConfigBaseContent, UTF_8, CREATE_NEW)
+        .returning(())
 
       val startDockerContent = Seq(
         "#!/usr/bin/env sh",
@@ -71,7 +87,7 @@ class StartDockerScriptCreatorSpec
     }
 
     "create the 'conf' directory under 'slug', " +
-      "move app-config-base into it and " +
+      "create app-config-base file in it and " +
       "create a new 'start-docker.sh' " +
       "if the 'start-docker.sh' doesn't exist " +
       "with custom JAVA_OPTS setting" in new Setup {
@@ -79,6 +95,14 @@ class StartDockerScriptCreatorSpec
       checkFileExist
         .expects(startDockerShInWorkspace)
         .returning(false)
+
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      createFile
+        .expects(confDirectory.resolve(appConfigBase), appConfigBaseContent, UTF_8, CREATE_NEW)
+        .returning(())
 
       val slugRuntimeJavaOpts = "-Xmx256"
 
@@ -108,11 +132,20 @@ class StartDockerScriptCreatorSpec
         s"Couldn't check if $startDockerShInWorkspace exists. Cause: ${exception.getMessage}"
       )
     }
+
     "return error when copy of start-docker.sh fails" in new Setup {
 
       checkFileExist
         .expects(startDockerShInWorkspace)
         .returning(true)
+
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      createFile
+        .expects(confDirectory.resolve(appConfigBase), appConfigBaseContent, UTF_8, CREATE_NEW)
+        .returning(())
 
       val exception = new Exception("exception message")
       copy
@@ -124,11 +157,55 @@ class StartDockerScriptCreatorSpec
       )
     }
 
+    "return error when conf directory creation fails" in new Setup {
+
+      checkFileExist
+        .expects(startDockerShInWorkspace)
+        .returning(false)
+
+      val exception = new Exception("exception message")
+      createDir
+        .expects(confDirectory)
+        .throwing(exception)
+
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe Left(
+        s"Couldn't create conf directory at $confDirectory. Cause: ${exception.getMessage}"
+      )
+    }
+
+    "return error when creating app-config-base file in the conf directory fails" in new Setup {
+
+      checkFileExist
+        .expects(startDockerShInWorkspace)
+        .returning(false)
+
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      val exception = new Exception("exception message")
+      createFile
+        .expects(confDirectory.resolve(appConfigBase), appConfigBaseContent, UTF_8, CREATE_NEW)
+        .throwing(exception)
+
+      startDockerShCreator.ensureStartDockerExists(workspaceDirectory, slugDirectory, repositoryName, None) shouldBe Left(
+        s"Couldn't create app-config-base. Cause: $exception"
+      )
+    }
+
     "return error when creating start-docker.sh fails" in new Setup {
 
       checkFileExist
         .expects(startDockerShInWorkspace)
         .returning(false)
+
+      createDir
+        .expects(confDirectory)
+        .returning(())
+
+      createFile
+        .expects(confDirectory.resolve(appConfigBase), appConfigBaseContent, UTF_8, CREATE_NEW)
+        .returning(())
 
       val exception = new Exception("exception message")
       createFile
@@ -149,6 +226,7 @@ class StartDockerScriptCreatorSpec
     val startDockerSh            = slugDirectory resolve "start-docker.sh"
     val confDirectory            = slugDirectory resolve "conf"
     val appConfigBase            = Paths.get(AppConfigBaseFileName(repositoryName).toString)
+    val appConfigBaseContent     = Seq("""include "application.conf"""")
 
     val createDir            = mockFunction[Path, Unit]
     val checkFileExist       = mockFunction[Path, Boolean]

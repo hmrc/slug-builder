@@ -44,6 +44,7 @@ class StartDockerScriptCreator(
     val startDockerFileInWorkspace = workspace resolve Paths.get("start-docker.sh")
     val startDockerFileInSlug      = slugDirectory resolve Paths.get("start-docker.sh")
     val appConfigBase              = Paths.get(AppConfigBaseFileName(repositoryName).toString)
+    val appConfigBaseContent       = Seq("""include "application.conf"""")
     val confDirectory              = slugDirectory resolve "conf"
     val startDockerContent =
       Seq(
@@ -57,12 +58,17 @@ class StartDockerScriptCreator(
       .leftMap(exception => s"Couldn't check if $startDockerFileInWorkspace exists. Cause: ${exception.getMessage}")
       .flatMap { useProvidedStartDocker =>
         for {
+          _ <- perform(create(confDirectory))
+                 .leftMap(exception => s"Couldn't create conf directory at $confDirectory. Cause: ${exception.getMessage}")
+          // Creating a bare bones app-config-base file with 'include "application.conf"' - will be overwritten by slugrunner but allows slug to run without additional steps.
+          _ <- perform(createFile(confDirectory.resolve(appConfigBase), appConfigBaseContent, UTF_8, CREATE_NEW))
+                 .leftMap(exception => s"Couldn't create app-config-base. Cause: $exception")
           _ <- if (useProvidedStartDocker)
-                perform(copy(startDockerFileInWorkspace, startDockerFileInSlug))
-                  .leftMap(exception => s"Couldn't copy the $startDockerFileInWorkspace script to the slug directory. Cause: $exception")
-              else
-                perform(createFile(startDockerFileInSlug, startDockerContent, UTF_8, CREATE_NEW))
-                  .leftMap(exception =>s"Couldn't create $startDockerFileInSlug. Cause: $exception")
+                 perform(copy(startDockerFileInWorkspace, startDockerFileInSlug))
+                   .leftMap(exception => s"Couldn't copy the $startDockerFileInWorkspace script to the slug directory. Cause: $exception")
+               else
+                 perform(createFile(startDockerFileInSlug, startDockerContent, UTF_8, CREATE_NEW))
+                   .leftMap(exception =>s"Couldn't create $startDockerFileInSlug. Cause: $exception")
         } yield
           if (useProvidedStartDocker) "Successfully copied start-docker.sh from the workspace to the slug"
           else "Successfully created new start-docker.sh script"
