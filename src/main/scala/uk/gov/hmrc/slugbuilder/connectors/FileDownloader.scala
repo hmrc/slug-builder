@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.slugbuilder.connectors
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.FileIO
+import org.apache.pekko.stream.{IOOperationIncompleteException, Materializer}
+import org.apache.pekko.stream.scaladsl.FileIO
 import play.api.libs.ws.{StandaloneWSClient, StandaloneWSResponse}
 
 import java.nio.file.Paths
@@ -65,7 +65,7 @@ class FileDownloader(wsClient: StandaloneWSClient)(implicit materializer: Materi
           }
         }
         .recover {
-          case e: akka.stream.IOOperationIncompleteException if e.getCause != null => Left(DownloadError(e.getCause.getMessage))
+          case e: IOOperationIncompleteException if e.getCause != null => Left(DownloadError(e.getCause.getMessage))
           case NonFatal(exception) => Left(DownloadError(exception.getMessage))
         },
       requestTimeout

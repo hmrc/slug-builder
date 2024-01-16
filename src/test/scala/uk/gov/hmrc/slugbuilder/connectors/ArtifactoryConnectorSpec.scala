@@ -262,7 +262,6 @@ class ArtifactoryConnectorSpec
         s"$artifactoryUri/hmrc-releases/uk/gov/hmrc/${repositoryName}_${scalaVersion}/$releaseVersion/${repositoryName}_${scalaVersion}-$releaseVersion.tgz"
       )
       val artefactName = ArtefactFileName(repositoryName, releaseVersion).toString
-      val destinationFileName = DestinationFileName(artefactName + "_" + scalaVersion)
       (fileDownloader.download _)
         .expects(fileUrl, *, *)
         .onCall { (_, destinationFile, _) =>

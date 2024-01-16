@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.slugbuilder.connectors
 
-import akka.actor.ActorSystem
-import akka.stream.scaladsl.{FileIO, Sink, Source}
-import akka.util.ByteString
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.scaladsl.{FileIO, Sink, Source}
+import org.apache.pekko.util.ByteString
 import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.EitherValues
