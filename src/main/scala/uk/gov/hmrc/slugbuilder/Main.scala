@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.slugbuilder
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import uk.gov.hmrc.slugbuilder.ArgParser.{Build, Publish}
 import uk.gov.hmrc.slugbuilder.connectors.{ArtifactoryConnector, FileDownloader}

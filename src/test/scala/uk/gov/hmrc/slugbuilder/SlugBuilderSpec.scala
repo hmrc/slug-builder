@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.slugbuilder
 
+import org.mockito.Strictness
 import org.mockito.scalatest.MockitoSugar
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers
@@ -488,10 +489,10 @@ class SlugBuilderSpec
         super.printSuccess(message)
       }
     }
-    val artifactoryConnector     = mock[ArtifactoryConnector    ](withSettings.lenient)
-    val tarArchiver              = mock[TarArchiver             ](withSettings.lenient)
-    val startDockerScriptCreator = mock[StartDockerScriptCreator](withSettings.lenient)
-    val fileUtils                = mock[FileUtils               ](withSettings.lenient)
+    val artifactoryConnector     = mock[ArtifactoryConnector    ](withSettings.strictness(Strictness.Lenient))
+    val tarArchiver              = mock[TarArchiver             ](withSettings.strictness(Strictness.Lenient))
+    val startDockerScriptCreator = mock[StartDockerScriptCreator](withSettings.strictness(Strictness.Lenient))
+    val fileUtils                = mock[FileUtils               ](withSettings.strictness(Strictness.Lenient))
 
     val jdkFileName = "jdk.tgz"
 
