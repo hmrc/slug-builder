@@ -122,6 +122,7 @@ class ArtifactoryConnectorSpec
     val fileNotFound = Left[DownloadError, Unit](DownloadError("A file does not exist"))
 
     "return Right if artefact can be downloaded from Artifactory successfully" in new Setup {
+      stubArtefactDownload(v3   , fileNotFound)
       stubArtefactDownload(v2_13, fileNotFound)
       stubArtefactDownload(v2_12, fileNotFound)
       val fileUrl = stubArtefactDownload(v2_11, Right(()))
@@ -130,6 +131,7 @@ class ArtifactoryConnectorSpec
     }
 
     "return Left if there is no artefact" in new Setup {
+      stubArtefactDownload(v3   , fileNotFound)
       stubArtefactDownload(v2_13, fileNotFound)
       stubArtefactDownload(v2_12, fileNotFound)
       stubArtefactDownload(v2_11, fileNotFound)
@@ -137,6 +139,7 @@ class ArtifactoryConnectorSpec
     }
 
     "return Left if more then one " in new Setup {
+      stubArtefactDownload(v3   , fileNotFound)
       stubArtefactDownload(v2_13, Right(()))
       stubArtefactDownload(v2_12, fileNotFound)
       stubArtefactDownload(v2_11, Right(()))
@@ -145,6 +148,7 @@ class ArtifactoryConnectorSpec
 
     "return Left if there was an error when downloading the artefact from Artifactory" in new Setup {
       val downloadingProblem = DownloadError("downloading problem")
+      stubArtefactDownload(v3   , fileNotFound)
       stubArtefactDownload(v2_13, Left(downloadingProblem))
       stubArtefactDownload(v2_12, fileNotFound)
       stubArtefactDownload(v2_11, fileNotFound)
