@@ -158,8 +158,8 @@ class ArtifactoryConnectorSpec
   }
 
   "publish" should {
-    "do a PUT with proper authentication" in new Setup {
-      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtefactFilename"
+    "do a PUT to the slugs repository with proper authentication" in new Setup {
+      val slugUrl = s"$artifactoryUri/slugs/slugs/$repositoryName/$slugArtefactFilename"
       (wsClient.url(_: String))
         .expects(slugUrl)
         .returning(wsRequest)
@@ -189,7 +189,7 @@ class ArtifactoryConnectorSpec
     }
 
     "handle errors" in new Setup {
-      val slugUrl = s"$artifactoryUri/webstore-local/slugs/$repositoryName/$slugArtefactFilename"
+      val slugUrl = s"$artifactoryUri/slugs/slugs/$repositoryName/$slugArtefactFilename"
       (wsClient.url(_: String))
         .expects(slugUrl)
         .returning(wsRequest)
