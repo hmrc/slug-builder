@@ -6,7 +6,7 @@ lazy val slugBuilder = Project("slug-builder", file("."))
     majorVersion := 0,
     isPublicArtefact := true,
     libraryDependencies ++= compileDependencies ++ testDependencies,
-    scalaVersion := "2.13.12",
+    scalaVersion := "2.13.16",
     assemblySettings
   )
 

@@ -40,7 +40,7 @@ class ArtifactoryConnector(
 ) {
   private val requestTimeout      = 5.minutes
   private val webstoreVirtualRepo = "webstore"
-  private val webstoreLocalRepo   = "webstore-local"
+  private val slugsRepo           = "slugs"
 
   def downloadJdk(targetFile: String): Either[String, String] = {
     val javaDownloadUri = FileUrl(s"$artifactoryUri/$webstoreVirtualRepo/java/$jdkFileName")
@@ -104,8 +104,8 @@ class ArtifactoryConnector(
     }
   }
 
-  private def slugUrl(webstoreRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
-    s"$artifactoryUri/$webstoreRepoName/slugs/$repositoryName/${slugArtefactFileName(repositoryName, releaseVersion)}"
+  private def slugUrl(artifactoryRepoName: String, repositoryName: RepositoryName, releaseVersion: ReleaseVersion) =
+    s"$artifactoryUri/$artifactoryRepoName/slugs/$repositoryName/${slugArtefactFileName(repositoryName, releaseVersion)}"
 
   def slugArtefactFileName(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): String =
     s"${repositoryName}_${releaseVersion}_$slugRunnerVersion.tgz"
@@ -134,7 +134,7 @@ class ArtifactoryConnector(
   }
 
   def publish(repositoryName: RepositoryName, releaseVersion: ReleaseVersion): Either[String, String] = {
-    val publishUrl = slugUrl(webstoreLocalRepo, repositoryName, releaseVersion)
+    val publishUrl = slugUrl(slugsRepo, repositoryName, releaseVersion)
 
     Await.result(
       wsClient
