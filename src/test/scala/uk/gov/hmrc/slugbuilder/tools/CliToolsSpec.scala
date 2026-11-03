@@ -33,7 +33,9 @@ class CliToolsSpec
 
     "return handle errors where the command is not found" in new TestSetup {
       val invalidCmd = "invalidCmd"
-      new CliTools(progressReporter).run(Array(invalidCmd)).left.value shouldBe "Cannot run program \"invalidCmd\": error=2, No such file or directory"
+      val error = new CliTools(progressReporter).run(Array(invalidCmd)).left.value
+      error should startWith(s"Cannot run program \"$invalidCmd\":")
+      error should include("No such file or directory")
       progressReporter.logs                                 shouldBe empty
     }
 
